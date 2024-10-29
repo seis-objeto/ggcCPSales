@@ -1,0 +1,1536 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+  Persistable = 0  'NotPersistable
+  DataBindingBehavior = 0  'vbNone
+  DataSourceBehavior  = 0  'vbNone
+  MTSTransactionMode  = 0  'NotAnMTSObject
+END
+Attribute VB_Name = "clsCPTransfer"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = True
+'€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€
+' Rex S. Adversalo
+' XerSys Computing
+' Canaoalan, Binmaley, Pangasinan
+'
+' Copyright 2003-2005 and beyond
+' All Rights Reserved
+'
+'     Cellphone Project Branch Delivery Object
+'
+' ºººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººº
+' €  All  rights reserved. No part of this  software  €€  This Software is Owned by        €
+' €  may be reproduced or transmitted in any form or  €€                                   €
+' €  by   any   means,  electronic   or  mechanical,  €€    GUANZON MERCHANDISING CORP.    €
+' €  including recording, or by information  storage  €€     Guanzon Bldg. Perez Blvd.     €
+' €  and  retrieval  systems, without  prior written  €€           Dagupan City            €
+' €  from the author.                                 €€  Tel No. 522-1085 ; 522-0863      €
+' ºººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººº
+'CP_Serial_Transfer_Detail
+'   1. sTransNox(10)
+'   2. nEntryNox
+'   3. sSerialID(10)
+'   4. nUnitPrce
+'CP_Transfer_Detail
+'   1. sTransNox(10)
+'   2. nEntryNox
+'   3. sStockIDx(10)
+'   4. nQuantity
+'   5. nUnitPrce
+'   6. cWdSerial
+'CP_Transfer_Master
+'   1. sTransNox(10)
+'   2. dTransact
+'   3. sDestinat(2)
+'   4. sRemarksx
+'   5. sReferNox
+'   6. sReceived
+'   7. dReceived
+'   8. cTranStat
+'   9. nEntryNox
+'  10. sRequestx(15)
+'  11. sApproved(15)
+'  12. sModified(8)
+'  13. dModified
+' ==========================================================================================
+'  Kalyptus [ 06/12/2008 08:56 am ]
+'     Started creating this object - based on clsSPTransfer
+'€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€
+
+Option Explicit
+
+Private Const pxeMODULENAME = "clsCPTransfer"
+
+Private p_oAppDrivr As clsAppDriver
+Private WithEvents p_oBaseClas As clsMasterDetail
+Attribute p_oBaseClas.VB_VarHelpID = -1
+Private p_oSerialOld As Recordset
+Private p_oCPTrans As Recordset
+Private p_oSerial As Recordset
+
+Private p_sBranchCd As String
+Private p_sAddressx As String
+Private p_nTranStat As Integer
+
+Private pbInitTran As Boolean
+Private pbModified As Boolean
+Private pnCtr As Integer
+
+Public Event DetailRetrieved(ByVal Index As Integer)
+Public Event MasterRetrieved(ByVal Index As Integer)
+
+Property Set AppDriver(oAppDriver As clsAppDriver)
+   Set p_oAppDrivr = oAppDriver
+End Property
+
+Property Get Branch() As String
+   Branch = p_sBranchCd
+End Property
+
+Property Let Branch(Value As String)
+   p_sBranchCd = Value
+End Property
+
+Property Get Detail(ByVal Row As Long, Index As Variant) As Variant
+   On Error Resume Next
+   
+   If pbInitTran = False Then Exit Property
+   
+   Detail = p_oBaseClas.Detail(Row, Index)
+End Property
+
+Property Let Detail(ByVal Row As Long, Index As Variant, Value As Variant)
+   On Error Resume Next
+   
+   If pbInitTran = False Then Exit Property
+   
+   If Not IsNumeric(Index) Then Index = LCase(Index)
+   Select Case Index
+   Case 1, "sbarrcode"
+      getDetail Row, 1, Value, False
+   Case 2, "sdescript"
+      getDetail Row, 2, Value, False
+   Case 5, "nquantity"
+      p_oBaseClas.Detail(Row, Index) = Value
+      If p_oBaseClas.Detail(Row, "cHsSerial") = xeYes Then
+         If Value >= 0 Then
+            If p_oSerial.RecordCount = 0 Then
+               lnValue = Value
+            Else
+               If Value > p_oSerial.RecordCount Then lnValue = Value - p_oSerial.RecordCount
+            End If
+            Call addSerial(Row + 1, lnValue)
+         End If
+      End If
+   Case Else
+      p_oBaseClas.Detail(Row, Index) = Value
+   End Select
+End Property
+
+Property Get Serial(ByVal EntryNo, _
+                     ByVal Row As Long, _
+                     ByVal Index As Variant) As Variant
+   On Error Resume Next
+   
+   If pbInitTran = False Then Exit Property
+   p_oSerial.Filter = "nEntryNox = " & EntryNo
+   If Row > (p_oSerial.RecordCount - 1) Then Exit Property
+
+   p_oSerial.Move Row, adBookmarkFirst
+   If Not IsNumeric(Index) Then Index = LCase(Index)
+
+   Select Case Index
+   Case 1, "sserialno"
+      Serial = p_oSerial("sSerialNo")
+   Case 2, "stockidx"
+      Serial = p_oSerial("sStockIDx")
+   End Select
+End Property
+
+Property Let Serial(ByVal EntryNo, _
+                     ByVal Row As Long, _
+                     ByVal Index As Variant, Value As Variant)
+   On Error Resume Next
+   
+   If pbInitTran = False Then Exit Property
+   
+   p_oSerial.Filter = "nEntryNox = " & EntryNo
+   If Row > (p_oSerial.RecordCount - 1) Then Exit Property
+
+   p_oSerial.Move Row, adBookmarkFirst
+   If Not IsNumeric(Index) Then Index = LCase(Index)
+   Select Case Index
+   Case 1, "sserialno"
+      p_oSerial("sSerialNo") = Value
+   Case 2, "stockidx"
+      p_oSerial("sStockIDx") = Value
+   End Select
+End Property
+
+Property Get Master(Index As Variant) As Variant
+   If pbInitTran = False Then Exit Property
+   If Not IsNumeric(Index) Then Index = LCase(Index)
+   Select Case Index
+   Case 3, "xaddressx"
+      Master = p_sAddressx
+   Case Else
+      Master = p_oBaseClas.Master(Index)
+   End Select
+End Property
+
+Property Let Master(Index As Variant, Value As Variant)
+   If pbInitTran = False Then Exit Property
+   
+   If Not IsNumeric(Index) Then Index = LCase(Index)
+   Select Case Index
+   Case 1, "dtransact"
+      p_oBaseClas.Master(Index) = Value
+   Case 2, "sdestinat"
+      getMaster Value, False
+   Case 3, "xaddressx"
+      p_sAddressx = Value
+   Case Else
+      p_oBaseClas.Master(Index) = Value
+   End Select
+End Property
+
+Property Get ItemCount() As Long
+   If pbInitTran = False Then Exit Property
+   ItemCount = p_oBaseClas.ItemCount
+End Property
+
+Property Get MasFldSize(ByVal Index As Integer) As Variant
+   On Error Resume Next
+
+   If pbInitTran = False Then Exit Property
+   
+   MasFldSize = p_oBaseClas.MasFldSize(Index)
+End Property
+
+Property Let TransStatus(ByVal Value As Integer)
+   p_nTranStat = Value
+End Property
+
+Function InitTransaction() As Boolean
+   Dim lsProcName As String
+   Dim lsCondition As String
+   
+   lsProcName = "InitTransaction"
+   On Error GoTo errProc
+   InitTransaction = False
+
+   If isAppDriverOK(p_oAppDrivr) = False Then GoTo endProc
+   
+   If p_sBranchCd = Empty Then p_sBranchCd = p_oAppDrivr.BranchCode
+   
+   Set p_oBaseClas = New clsMasterDetail
+   
+   With p_oBaseClas
+      Set .AppDriver = p_oAppDrivr
+      .MasterTable = "CP_Transfer_Master"
+      .DetailTable = "CP_Transfer_Detail"
+      
+      .MasterQuery = "SELECT" & _
+                        "  a.sTransNox" & _
+                        ", a.dTransact" & _
+                        ", a.sDestinat" & _
+                        ", a.sReferNox" & _
+                        ", CONCAT(b.sAddressx, ', ', c.sTownName, ', ', d.sProvName, ' ', c.sZippCode) xAddressx" & _
+                        ", a.sRequestx" & _
+                        ", a.sRemarksx" & _
+                        ", a.sReceived" & _
+                        ", a.dReceived" & _
+                        ", a.sApproved" & _
+                        ", a.cTranStat" & _
+                        ", LEFT(a.sTransNox, 2) xSourcexx" & _
+                        ", a.nEntryNox" & _
+                        ", a.sAddedByx" & _
+                        ", a.dAddedDte" & _
+                        ", a.sModified" & _
+                        ", a.dModified" & _
+                     " FROM " & .MasterTable & " a" & _
+                        ", Branch b" & _
+                        ", TownCity c" & _
+                        ", Province d" & _
+                     " WHERE a.sDestinat = b.sBranchCd" & _
+                        " AND b.sTownIDxx = c.sTownIDxx" & _
+                        " AND c.sProvIDxx = d.sProvIDxx"
+                     
+      .DetailQuery = "SELECT" & _
+                        "  a.nEntryNox" & _
+                        ", b.sBarrCode" & _
+                        ", b.sDescript" & _
+                        ", e.sModelNme" & _
+                        ", c.nQtyOnHnd" & _
+                        ", a.nQuantity" & _
+                        ", a.nUnitPrce" & _
+                        ", a.dModified" & _
+                        ", a.sTransNox" & _
+                        ", a.sStockIDx" & _
+                        ", c.nQtyOnHnd  + a.nQuantity xQtyOnHnd" & _
+                        ", c.nLedgerNo" & _
+                        ", b.cHsSerial" & _
+      .DetailQuery = .DetailQuery & _
+                     " FROM " & .DetailTable & " a" & _
+                        ", CP_Inventory b" & _
+                              " LEFT JOIN CP_Model e" & _
+                                 " ON b.sModelIDx = e.sModelIDx" & _
+                        ", CP_Inventory_Master c" & _
+                     " WHERE a.sStockIDx = b.sStockIDx" & _
+                        " AND b.sStockIDx = c.sStockIDx" & _
+                        " AND b.cPartType = d.cPartType" & _
+                        " AND c.sBranchCd = " & strParm(p_sBranchCd) & _
+                     " ORDER BY a.nEntryNox"
+   
+      .Reference = "a.sTransNox|a.sTransNox"
+      .VerifyEntryNo = True
+      
+      pbInitTran = .InitTransaction
+      
+      .BrowseQuery(0) = "SELECT" & _
+                           "  a.sTransNox" & _
+                           ", b.sBranchNm" & _
+                           ", a.dTransact" & _
+                        " FROM " & .MasterTable & " a" & _
+                           ", Branch b" & _
+                        " WHERE a.sDestinat = b.sBranchCd" & _
+                           " AND a.sTransNox LIKE " & strParm(p_sBranchCd & "%") & _
+                        " ORDER BY b.sBranchNm" & _
+                           ", a.dTransact"
+      
+      If p_nTranStat <> xeStateUnknown Then
+         If p_nTranStat > xeStateUnknown Then
+            lsCondition = "("
+            For pnCtr = 1 To Len(Trim(Str(p_nTranStat)))
+               lsCondition = lsCondition & " cTranStat = " & _
+                                 strParm(Mid(Trim(Str(p_nTranStat)), pnCtr, 1)) & " OR "
+            Next
+            lsCondition = Left(lsCondition, Len(Trim(lsCondition)) - 2) & ")"
+         Else
+            lsCondition = "cTranStat = " & strParm(p_nTranStat)
+         End If
+      End If
+      .BrowseQuery(0) = AddCondition(.BrowseQuery(0), lsCondition)
+      
+      .BrowseColumn(0) = "sTransNox»sBranchNm»dTransact"
+      .BrowseCriteria(0) = "a.sTransNox»b.sBranchNm»a.dTransact"
+      .BrowseTitle(0) = "Transaction No»Branch»Date"
+      .BrowseFormat(0) = "@@-@@@@@@@@»@»MMMM DD, YYYY"
+      
+      ' Query statement for the branch destination field
+      .BrowseQuery(2) = "SELECT" & _
+                           "  a.sBranchCd" & _
+                           ", a.sBranchNm" & _
+                           ", CONCAT(a.sAddressx, ', ', b.sTownName, ', ', c.sProvName, ' ', b.sZippCode) AS xAddressx" & _
+                        " FROM Branch a" & _
+                           ", TownCity b" & _
+                           ", Province c" & _
+                        " WHERE a.sTownIDxx = b.sTownIDxx" & _
+                           " AND b.sProvIDxx = c.sProvIDxx" & _
+                           " AND a.cRecdStat = " & xeRecStateActive & _
+                           " AND a.sBranchCd <> " & strParm(p_sBranchCd)
+      .BrowseColumn(2) = "sBranchCd»sBranchNm»xAddressx"
+      .BrowseTitle(2) = "Code»Branch Name»Address"
+      
+      .BrowseDetailQuery(0) = "SELECT" & _
+                                 "  a.sBarrCode" & _
+                                 ", a.sDescript" & _
+                                 ", d.sModelNme" & _
+                                 ", b.nQtyOnHnd" & _
+                                 ", a.nSelPrice" & _
+                                 ", a.sStockIDx" & _
+                                 ", b.nLedgerNo" & _
+                                 ", b.cHsSerial" & _
+                              " FROM CP_Inventory a" & _
+                                    " LEFT JOIN CP_Model d" & _
+                                       " ON a.sModelIDx = d.sModelIDx" & _
+                                 ", CP_Inventory_Master b" & _
+                              " WHERE a.sStockIDx = b.sStockIDx" & _
+                                 " AND b.sBranchCd = " & strParm(p_sBranchCd)
+      .BrowseDetailColumn(0) = "sBarrCode»sDescript»sTypeCode»sModelNme»nQtyOnHnd»nSelPrice"
+      .BrowseDetailTitle(0) = "Bar Code»Description»Type»Model»QtyOnHand»Price"
+      .BrowseDetailFormat(0) = "@»@»@»@»#0»#,##0.00"
+      .BrowseDetailCriteria(0) = "a.sBarrCode»a.sDescript"
+   End With
+   
+   InitTransaction = pbInitTran
+   
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & " )"
+End Function
+
+Function NewTransaction() As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "NewTransaction"
+   On Error GoTo errProc
+
+   If pbInitTran Then NewTransaction = p_oBaseClas.NewTransaction
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & " )"
+End Function
+
+Function SaveTransaction() As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "SaveTransaction"
+   On Error GoTo errProc
+   
+   If pbInitTran Then SaveTransaction = p_oBaseClas.SaveTransaction
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & " )"
+End Function
+
+Function OpenTransaction(sTransNo As String) As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "OpenTransaction"
+   On Error GoTo errProc
+   
+   If pbInitTran Then OpenTransaction = p_oBaseClas.OpenTransaction(sTransNo)
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & sTransNo & " )"
+End Function
+
+Function DeleteTransaction() As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "DeleteTransaction"
+   On Error GoTo errProc
+   
+   If pbInitTran Then DeleteTransaction = p_oBaseClas.DeleteTransaction
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & " )"
+End Function
+
+Function SearchTransaction(Optional sSearch As Variant, Optional bByCode As Variant) As Boolean
+   Dim lsProcName As String
+   Dim lsRecord As String
+   Dim lsValue As String
+   Dim lsField As String
+   Dim lsDescript As String
+   
+   lsProcName = "SearchTransaction"
+   On Error GoTo errProc
+   SearchTransaction = False
+   
+   If pbInitTran = False Then GoTo endProc
+   
+   If Not IsMissing(sSearch) Then
+      lsValue = sSearch
+      lsField = "a.sTransNox"
+      lsDescript = ""
+      If Not IsMissing(bByCode) Then
+         If bByCode = False Then
+            lsField = "b.sBranchNm"
+            lsDescript = "b.sBranchNm"
+         End If
+      End If
+   End If
+   
+   SearchTransaction = p_oBaseClas.SearchTransaction(lsValue, lsField, lsDescript)
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & sSearch _
+                       & ", " & bByCode & " )"
+End Function
+
+Function SearchAcceptance(Optional sSearch As Variant, Optional bByCode As Variant) As Boolean
+   Dim lsProcName As String
+   Dim lsRecord As String
+   Dim lsValue As String, lsField As String
+   Dim lsDescript As String, lsCondition As String
+   Dim lsMaster As String, lsDetail As String
+   Dim lsQuery As String
+   
+   lsProcName = "SearchAcceptance"
+   On Error GoTo errProc
+   
+   If pbInitTran = False Then GoTo endProc
+   
+   With p_oBaseClas
+      lsMaster = .MasterQuery
+      lsDetail = .DetailQuery
+      lsQuery = .BrowseQuery(0)
+      
+      .MasterQuery = "SELECT" & _
+                        "  a.sTransNox" & _
+                        ", a.dTransact" & _
+                        ", a.sDestinat" & _
+                        ", a.sReferNox" & _
+                        ", CONCAT(b.sAddressx, ', ', c.sTownName, ', ', d.sProvName, ' ', c.sZippCode) xAddressx" & _
+                        ", a.sRequestx" & _
+                        ", a.sRemarksx" & _
+                        ", a.sReceived" & _
+                        ", a.dReceived" & _
+                        ", a.sApproved" & _
+                        ", a.cTranStat" & _
+                        ", b.sBranchNm xSourcexx" & _
+                        ", a.nEntryNox" & _
+                        ", a.sAddedByx" & _
+                        ", a.dAddedDte" & _
+                        ", a.sModified" & _
+                        ", a.dModified" & _
+                     " FROM " & .MasterTable & " a" & _
+                        ", Branch b" & _
+                        ", TownCity c" & _
+                        ", Province d" & _
+                     " WHERE LEFT(a.sTransNox, 2) = b.sBranchCd" & _
+                        " AND b.sTownIDxx = c.sTownIDxx" & _
+                        " AND c.sProvIDxx = d.sProvIDxx"
+      
+      .DetailQuery = "SELECT" & _
+                        "  a.nEntryNox" & _
+                        ", b.sBarrCode" & _
+                        ", b.sDescript" & _
+                        ", e.sModelNme" & _
+                        ", c.nQtyOnHnd" & _
+                        ", a.nQuantity" & _
+                        ", a.nUnitPrce" & _
+                        ", a.dModified" & _
+                        ", a.sTransNox" & _
+                        ", a.sStockIDx" & _
+                        ", c.nQtyOnHnd  + a.nQuantity xQtyOnHnd" & _
+                        ", c.nLedgerNo" & _
+                        ", b.cHsSerial"
+      .DetailQuery = .DetailQuery & _
+                     " FROM " & .DetailTable & " a" & _
+                        ", CP_Inventory b" & _
+                              " LEFT JOIN CP_Model e" & _
+                                 " ON b.sModelIDx = e.sModelIDx" & _
+                        ", CP_Inventory_Master c" & _
+                     " WHERE a.sStockIDx = b.sStockIDx" & _
+                        " AND b.sStockIDx = c.sStockIDx" & _
+                        " AND c.sBranchCd = LEFT(a.sTransNox, 2)" & _
+                     " ORDER BY a.nEntryNox"
+
+      .BrowseQuery(0) = "SELECT" & _
+                           "  a.sTransNox" & _
+                           ", b.sBranchNm" & _
+                           ", a.dTransact" & _
+                        " FROM " & .MasterTable & " a" & _
+                           ", Branch b" & _
+                        " WHERE LEFT(a.sTransNox, 2) = b.sBranchCd" & _
+                           " AND a.sDestinat = " & strParm(p_sBranchCd) & _
+                        " ORDER BY b.sBranchNm" & _
+                           ", a.dTransact"
+      
+      If p_nTranStat <> xeStateUnknown Then
+         If p_nTranStat > xeStateUnknown Then
+            lsCondition = "("
+            For pnCtr = 1 To Len(Trim(Str(p_nTranStat)))
+               lsCondition = lsCondition & " cTranStat = " & _
+                                 strParm(Mid(Trim(Str(p_nTranStat)), pnCtr, 1)) & " OR "
+            Next
+            lsCondition = Left(lsCondition, Len(Trim(lsCondition)) - 2) & ")"
+         Else
+            lsCondition = "cTranStat = " & strParm(p_nTranStat)
+         End If
+      End If
+      .BrowseQuery(0) = AddCondition(.BrowseQuery(0), lsCondition)
+   End With
+   
+   If Not IsMissing(sSearch) Then
+      lsValue = sSearch
+      lsField = "a.sTransNox"
+      lsDescript = ""
+      If Not IsMissing(bByCode) Then
+         If bByCode = False Then
+            lsField = "b.sBranchNm"
+            lsDescript = "b.sBranchNm"
+         End If
+      End If
+   End If
+   
+   SearchAcceptance = p_oBaseClas.SearchTransaction(lsValue, lsField, lsDescript)
+   
+endProc:
+   With p_oBaseClas
+      .MasterQuery = lsMaster
+      .DetailQuery = lsDetail
+      .BrowseQuery(0) = lsQuery
+   End With
+
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & sSearch _
+                        & ", " & bByCode & " )"
+End Function
+
+Function PostTransaction(ByVal sTransNo As String) As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "PostTransaction"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   If pbInitTran Then PostTransaction = p_oBaseClas.PostTransaction(sTransNo)
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & sTransNo & " )"
+End Function
+
+Function CloseTransaction(ByVal sTransNo As String)
+   Dim lsProcName As String
+   
+   lsProcName = "CloseTransaction"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   If pbInitTran Then CloseTransaction = p_oBaseClas.CloseTransaction(sTransNo)
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & sTransNo & " )"
+End Function
+
+Function CancelTransaction() As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "CancelTransaction"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   If pbInitTran Then CancelTransaction = p_oBaseClas.CancelTransaction()
+
+endProc:
+   Exit Function
+errProc:
+    ShowError lsProcName & "( " & " )"
+End Function
+
+Function AddDetail() As Boolean
+   With p_oBaseClas
+      AddDetail = .AddDetail
+   
+      pnCtr = .ItemCount - 1
+      .Detail(pnCtr, "nEntryNox") = pnCtr + 1
+      .Detail(pnCtr, "sBarrCode") = ""
+      .Detail(pnCtr, "sDescript") = ""
+      .Detail(pnCtr, "sModelNme") = ""
+      .Detail(pnCtr, "nQtyOnHnd") = 0
+      .Detail(pnCtr, "nUnitPrce") = 0#
+      .Detail(pnCtr, "nQuantity") = 0
+      .Detail(pnCtr, "sTransNox") = .Master("sTransNox")
+      .Detail(pnCtr, "sStockIDx") = ""
+      .Detail(pnCtr, "nLedgerNo") = 0
+      .Detail(pnCtr, "cHsSerial") = xeNo
+   End With
+End Function
+
+Function DeleteDetail(ByVal Index As Long) As Boolean
+   With p_oBaseClas
+      If .Detail(Index, "cHsSerial") = xeYes Then
+         If delSerialOnCache(Index) = False Then Exit Function
+      End If
+      DeleteDetail = p_oBaseClas.DeleteDetail(Index)
+   End With
+End Function
+
+Function SearchDetail(ByVal Row As Long, _
+                        ByVal Index As Variant, _
+                        Optional Value As Variant = "") As Boolean
+   Dim lsProcName As String
+
+   lsProcName = "SearchDetail"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   SearchDetail = False
+
+   If pbInitTran = False Then GoTo endProc
+
+   Index = LCase(Index)
+   Select Case Index
+   Case 1, "sbarrcode"
+      getDetail Row, 1, Value, True
+   Case 2, "sdescript"
+      getDetail Row, 2, Value, True
+   End Select
+   SearchDetail = True
+
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Function SearchMaster(ByVal Index As Variant, Optional Value As Variant = "") As Boolean
+   If pbInitTran = False Then Exit Function
+   
+   If Not IsNumeric(Index) Then Index = LCase(Index)
+   Select Case Index
+   Case 2, "sdestinat"
+      getMaster Value, True
+   Case Else
+      
+   End Select
+   SearchMaster = True
+End Function
+
+Function UpdateTransaction() As Boolean
+   With p_oBaseClas
+      If .Master("sReceived") <> Empty Then Exit Function
+         
+      .EditMode = xeModeUpdate
+   End With
+   UpdateTransaction = True
+End Function
+
+Sub ViewModify()
+   p_oBaseClas.ViewUserModify
+End Sub
+
+Function AcceptDelivery(dReceived As Date) As Boolean
+   Dim loCPTrans As clsCPInventoryTrans
+   Dim lors As Recordset
+   Dim lsProcName As String
+   Dim lsSQL As String
+   Dim lnRow As Long
+   
+   lsProcName = "AcceptDelivery"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   AcceptDelivery = False
+   
+   If Not pbInitTran Then GoTo endProc
+   
+   With p_oBaseClas
+      If .Master("sTransNox") = "" Then GoTo endProc
+      
+      lsSQL = "SELECT" & _
+                  "  a.sStockIDx" & _
+                  ", a.nQuantity" & _
+                  ", b.nQtyOnHnd" & _
+                  ", b.nLedgerNo" & _
+               " FROM " & .DetailTable & " a" & _
+                     " LEFT JOIN CP_Inventory_Master b" & _
+                        " ON a.sStockIDx = b.sStockIDx" & _
+                           " AND b.sBranchCd = " & strParm(.Master("sDestinat")) & _
+               " WHERE a.sTransNox = " & strParm(.Master("sTransNox")) & _
+               " ORDER BY a.nEntryNox"
+      
+      Set lors = New Recordset
+      lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+      
+      If lors.RecordCount <> .ItemCount Then
+         MsgBox "Data Discrepancy Detected!", vbCritical, "Warning"
+         GoTo endProc
+      End If
+      
+      Set loCPTrans = New clsCPInventoryTrans
+      With loCPTrans
+         Set .AppDriver = p_oAppDrivr
+         .Branch = p_oBaseClas.Master("sDestinat")
+         If .InitTransaction() = False Then GoTo endProc
+      End With
+      
+      Set loCPTrans = New clsCPInventoryTrans
+      With loCPTrans
+         .Branch = p_sBranchCd
+         Set .AppDriver = p_oAppDrivr
+         If .InitTransaction() = False Then GoTo endProc
+      End With
+      
+      'Leave this part first...
+      For pnCtr = 0 To .ItemCount - 1
+         loCPTrans.Detail(pnCtr, "sStockIDx") = lors("sStockIDx")
+         loCPTrans.Detail(pnCtr, "nQuantity") = lors("nQuantity")
+         If IsNull(lors("nQtyOnHnd")) Then
+            loCPTrans.Detail(pnCtr, "cNewParts") = xeYes
+            loCPTrans.Detail(pnCtr, "nQtyOnHnd") = 0
+         Else
+            loCPTrans.Detail(pnCtr, "nQtyOnHnd") = lors("nQtyOnHnd")
+            loCPTrans.Detail(pnCtr, "nLedgerNo") = lors("nLedgerNo")
+         End If
+         
+         lors.MoveNext
+      Next
+      
+      ' if a CP_Inventory is not successfully updated, cancel saving.
+      If loCPTrans.AcceptDelivery(.Master("sTransNox"), _
+            dReceived, _
+            xeModeAddNew) = False Then
+         GoTo endProc
+      End If
+      
+      lsSQL = "UPDATE " & .MasterTable & " SET" & _
+                  "  sReceived = " & strParm(p_oAppDrivr.UserID) & _
+                  ", dReceived = " & dateParm(dReceived) & _
+                  ", cTranStat = " & strParm(xeStatePosted) & _
+                  ", dModified = " & dateParm(p_oAppDrivr.ServerDate()) & _
+               " WHERE sTransNox = " & strParm(.Master("sTransNox"))
+               
+      lnRow = p_oAppDrivr.Execute(lsSQL, _
+                  .MasterTable, _
+                  p_sBranchCd, _
+                  Left(.Master("sTransNox"), 2))
+      
+      If lnRow = 0 Then
+         MsgBox "Unable to Update Delivery Transaction!!!", vbCritical, "Warning"
+         GoTo endProc
+      End If
+      
+      ' after accepting parts, check for SP Requested Disapproval
+      'if save
+   End With
+   
+   AcceptDelivery = True
+   
+endProc:
+   Set loCPTrans = Nothing
+
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & dReceived & " )"
+End Function
+
+Private Sub getMaster(ByVal lsValue As String, ByVal lbSearch As Boolean)
+   Dim lsMaster As String
+   Dim lasMaster() As String
+   Dim lsProcName As String
+
+   lsProcName = "GetMaster"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   With p_oBaseClas
+      If lsValue <> "" Then
+         If lsValue = .Master(2) Then GoTo endProc
+         
+         If lbSearch Then
+            lsMaster = "a.sBranchNm LIKE " & strParm(Trim(lsValue) & "%")
+         Else
+            lsMaster = "a.sBranchNm = " & strParm(Trim(lsValue))
+         End If
+      ElseIf lbSearch = False Then
+         GoTo endWithClear
+      End If
+   
+      lsMaster = .getMaster(2, lsMaster)
+      If lsMaster = Empty Then
+         If lbSearch = False Then
+            GoTo endWithClear
+         Else
+            GoTo endProc
+         End If
+      End If
+      lasMaster = Split(lsMaster, "»")
+      
+      .Master(2) = lasMaster(1)
+      p_sAddressx = lasMaster(2)
+   End With
+
+endProc:
+   RaiseEvent MasterRetrieved(2)
+   RaiseEvent MasterRetrieved(3)
+
+   Exit Sub
+endWithClear:
+   With p_oBaseClas
+      .Master(2) = ""
+      p_sAddressx = ""
+   End With
+   GoTo endProc
+errProc:
+    ShowError lsProcName & "( " & lsValue _
+                        & ", " & lbSearch & " )"
+End Sub
+                     
+Private Sub getDetail(ByVal lnRow As Integer, _
+                        ByVal lnIndex As Integer, _
+                        ByVal lsValue As String, _
+                        ByVal lbSearch As Boolean)
+   Dim lsDetail As String
+   Dim lasDetail() As String
+   Dim lsProcName As String
+
+   lsProcName = "GetDetail"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   With p_oBaseClas
+      If lsValue <> "" Then
+         If lnIndex = 1 Then     ' Bar Code
+            If lsValue = .Detail(lnRow, "sBarrCode") Then GoTo endProc
+            If lbSearch Then
+               lsDetail = "a.sBarrCode LIKE " & strParm(Trim(lsValue) & "%")
+            Else
+               lsDetail = "a.sBarrcode = " & strParm(Trim(lsValue))
+            End If
+         Else                    ' Description
+            If lsValue = .Detail(lnRow, "sDescript") Then GoTo endProc
+            If lbSearch Then
+               lsDetail = "a.sDescript LIKE " & strParm(Trim(lsValue) & "%")
+            Else
+               lsDetail = "a.sDescript = " & strParm(Trim(lsValue))
+            End If
+         End If
+      ElseIf lbSearch = False Then
+         GoTo endWithClear
+      End If
+   
+      lsDetail = .getDetail(lnRow, lsDetail)
+      If lsDetail = Empty Then
+         If lbSearch = False Then
+            GoTo endWithClear
+         Else
+            GoTo endProc
+         End If
+      End If
+      lasDetail = Split(lsDetail, "»")
+
+      .Detail(lnRow, "sBarrCode") = lasDetail(0)
+      .Detail(lnRow, "sDescript") = lasDetail(1)
+      .Detail(lnRow, "sModelNme") = lasDetail(2)
+      .Detail(lnRow, "nQtyOnHnd") = CLng(lasDetail(3))
+      .Detail(lnRow, "nQuantity") = 0
+      .Detail(lnRow, "nUnitPrce") = CDbl(lasDetail(4))
+      .Detail(lnRow, "sStockIDx") = lasDetail(5)
+      .Detail(lnRow, "nLedgerNo") = lasDetail(6)
+      .Detail(lnRow, "nLedgerNo") = lasDetail(6)
+      .Detail(lnRow, "cHsSerial") = lasDetail(7)
+   
+   End With
+
+endProc:
+   RaiseEvent DetailRetrieved(1)
+   RaiseEvent DetailRetrieved(2)
+   RaiseEvent DetailRetrieved(3)
+   RaiseEvent DetailRetrieved(4)
+   RaiseEvent DetailRetrieved(5)
+   RaiseEvent DetailRetrieved(6)
+   RaiseEvent DetailRetrieved(7)
+
+   Exit Sub
+endWithClear:
+   With p_oBaseClas
+      .Detail(lnRow, "sBarrCode") = ""
+      .Detail(lnRow, "sDescript") = ""
+      .Detail(lnRow, "sModelNme") = ""
+      .Detail(lnRow, "nQtyOnHnd") = 0
+      .Detail(lnRow, "nUnitPrce") = 0#
+      .Detail(lnRow, "nQuantity") = 0
+      .Detail(lnRow, "sStockIDx") = ""
+      .Detail(lnRow, "nLedgerNo") = 0
+      .Detail(lnRow, "cHsSerial") = xeNo
+      
+   End With
+   GoTo endProc
+errProc:
+    ShowError lsProcName & "( " & lnRow _
+                        & ", " & lnIndex _
+                        & ", " & lsValue _
+                        & ", " & lbSearch & " )"
+End Sub
+
+Private Function delSPTransaction() As Boolean
+   Dim loCPTrans As clsCPInventoryTrans
+   Dim lsProcName As String
+   Dim lbHsSerial As Boolean
+   
+   lsProcName = "delSPTransaction"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   Set loCPTrans = New clsCPInventoryTrans
+   With loCPTrans
+      Set .AppDriver = p_oAppDrivr
+      .Branch = p_sBranchCd
+      If .InitTransaction() = False Then GoTo endProc
+      
+      For pnCtr = 0 To .ItemCount - 1
+         .Detail(pnCtr, "sStockIDx") = p_oBaseClas.Detail(pnCtr, "sStockIDx")
+         .Detail(pnCtr, "nQtyOnHnd") = p_oBaseClas.Detail(pnCtr, "nQtyOnHnd")
+         .Detail(pnCtr, "nLedgerNo") = p_oBaseClas.Detail(pnCtr, "nLedgerNo")
+      
+         'Delete serial of this stock if serialized
+         If lbHasSerial = False And .Detail(pnCtr, "cHsSerial") = xeYes Then
+            lbHasSerial = True
+         End If
+            
+      Next
+      
+      If lbHsSerial = True Then
+         If deleteSerial() = False Then
+            MsgBox "Unable to delete serials of this STOCK: " & .Detail(pnCtr, "sStockIDx"), vbCritical, "Warning"
+            GoTo endProc
+         End If
+      End If
+      
+      ' if a serial is not successfully updated, cancel saving.
+      If .Delivery(p_oBaseClas.Master("sTransNox"), _
+            p_oBaseClas.Master("dTransact"), _
+            xeModeDelete) = False Then
+         GoTo endProc
+      End If
+   End With
+   
+   delSPTransaction = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Function createSerialTable() As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "createSerialTable"
+   On Error GoTo errProc
+   
+   Set p_oSerial = New Recordset
+   With p_oSerial
+      .Fields.Append "nEntryNox", adInteger, 4
+      .Fields.Append "sSerialID", adVarChar, 10
+      .Fields.Append "sSerialNo", adVarChar, 20
+      .Fields.Append "sTransNox", adVarChar, 10
+      .Open
+   End With
+
+   createSerialTable = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Sub addSerial(ByVal EntryNo As Variant, ByVal Quantity As Variant)
+   Dim lsProcName As String
+   Dim lnRow As Integer
+   
+   lsProcName = "addSerial"
+   On Error GoTo errProc
+   
+   With p_oSerial
+      For lnRow = 0 To Quantity - 1
+         .AddNew
+         .Fields("nEntryNox") = EntryNo
+         .Fields("sSerialNo") = ""
+         .Fields("sSerialID") = ""
+         .Fields("sTransNox") = p_oBaseClas.Master("sTransNox")
+      Next
+   End With
+
+endProc:
+   Exit Sub
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Sub
+
+Private Function addSerialOnCache( _
+      lnEntryNox As Integer, _
+      lsSerialID As String, _
+      lnOldEntry As Integer _
+      ) As Boolean
+   Dim lsProcName As String
+   
+   lsProcName = "addSerialOnCache"
+   On Error GoTo errProc
+
+   With p_oSerialOld
+      .Filter = ""
+      If .RecordCount = 0 Then
+         .AddNew
+         .Fields("sTransNox") = p_oBaseClas.Master("sTransNox")
+      Else
+         .MoveFirst
+         .Find "nEntryNox = " & strParm(lnOldEntry) & _
+          " AND sSerialID = " & strParm(lsSerialID), 0, adSearchForward
+         
+         If .EOF Then
+            .AddNew
+            .Fields("sTransNox") = p_oBaseClas.Master("sTransNox")
+         End If
+      End If
+      
+      .Fields("nEntryNox") = lnEntryNox + 1
+      .Fields("sSerialID") = lsSerialID
+   
+   End With
+   
+   addSerialOnCache = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Function loadSerialOnCache() As Boolean
+   Dim lsSQL As String
+   Dim lors As adodb.Recordset
+   Dim lsProcName As String
+   
+   lsProcName = "loadSerialOnCache"
+   On Error GoTo errProc
+
+   lsSQL = "SELECT a.sSerialID" & _
+                ", b.sSerialNo" & _
+                ", a.nEntryNox" & _
+                ", a.sTransNox" & _
+          " FROM CP_Transfer_Serial a" & _
+              ", CP_Inventory_Serial b" & _
+          " WHERE a.sTransNox = " & strParm(.Fields("sTransNox")) & _
+            " AND a.sSerialID = b.sSerialID" & _
+          " ORDER BY a.nEntryNox"
+  
+   Set p_oSerialOld = New adodb.Recordset
+   p_oSerialOld.Open lsSQL, p_oAppDrivr, adOpenKeyset, adLockOptimistic, adCmdText
+   Set p_oSerialOld.ActiveConnection = Nothing
+      
+   createSerialTable
+
+   Do Until lors.EOF
+      p_oSerial.AddNew
+      p_oSerial("nEntryNox") = p_oSerialOld("nEntryNox")
+      p_oSerial("sSerialID") = p_oSerialOld("sSerialID")
+      p_oSerial("sSerialNo") = p_oSerialOld("sSerialNo")
+      p_oSerial("sTransNox") = p_oBaseClas.Master("sTransNox")
+                  
+      p_oSerialOld.MoveNext
+   Loop
+   
+   loadSerialOnCache = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Function delSerialOnCache(ByVal lnEntryNox As Integer) As Boolean
+   Dim lsSQL As String
+   Dim lors As adodb.Recordset
+   Dim lsProcName As String
+   
+   lsProcName = "delSerialOnCache"
+   On Error GoTo errProc
+   
+   With p_oSerial
+      .Filter = "nEntryNox = " & lnEntryNox
+
+      If Not .EOF Then .MoveFirst
+      Do Until .EOF
+         .Delete
+         .MoveNext
+      Loop
+   End With
+      
+   delSerialOnCache = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Function saveSerial( _
+      ByVal lnEntryNox As Integer, _
+      ByVal lnQuantity As Integer, _
+      ByVal lnOldEntry As Integer _
+      ) As Boolean
+   
+   Dim lors As adodb.Recordset
+   Dim lsProcName As String
+   Dim lsSerialID As String
+   Dim lnSerial As Integer
+   Dim lsSerial As String
+   Dim lnCtr As Integer
+   Dim lsSQL As String
+   
+   lsProcName = "saveSerial"
+'   On Error GoTo errProc
+
+   With p_oSerial
+      .Filter = "nEntryNox = " & lnOldEntry
+      If .RecordCount < lnQuantity Then
+         MsgBox "No of items in serial is not equal with the quantity specified!"
+         GoTo endProc
+      Else
+         'Assumption was that we can delete a record but not insert in between records
+         If p_oBaseClas.EditMode <> xeModeAddNew And lnEntryNox <> lnOldEntry Then
+            p_oSerialOld.Filter = "nEntryNox = " & lnEntryNox
+            If p_oSerialOld.RecordCount > 0 Then
+               lsSQL = "DELETE FROM CP_Transfer_Serial" & _
+                      " WHERE sTransNox = " & strParm(.Fields("sTransNox")) & _
+                        " AND nEntryNox = " & lnEntryNox
+               p_oAppDrivr.Execute lsSQL, "CP_Transfer_Serial", Left(.Fields("sTransNox"), 2)
+            End If
+         End If
+         
+         .MoveFirst
+         lsSerial = ""
+         lsSerialID = GetNextCode("CP_Inventory_Serial", "sSerialID", True, p_oAppDrivr.Connection, True, p_sBranchCd)
+         lnSerial = CLng(Mid(lsSerialID, 5))
+         
+         For lnCtr = 1 To lnQuantity
+            .Fields("sSerialID") = Left(lsSerialID, 4) & Format(lnSerial, String(6, "0"))
+            If addSerialOnCache( _
+               lnEntryNox, _
+               .Fields("sSerialID"), _
+               lnOldEntry) = False Then
+               
+               MsgBox "Unable to add serial!"
+               GoTo endProc
+            End If
+            
+            If IFNull(p_oSerialOld.Fields("sTransNox").OriginalValue) = "" Then
+               .Fields("sTransNox") = p_oBaseClas.Master("sTransNox")
+               lsSQL = ""
+            Else
+               lsSQL = "sTransNox = " & strParm(.Fields("sTransNox")) & _
+                  " AND nEntryNox = " & lnOldEntry & _
+                  " AND sSerialID = " & strParm(.Fields("sSerialID"))
+            End If
+            
+            .Fields("nEntryNox") = lnEntryNox
+                        
+            lsSQL = ADO2SQL( _
+                        p_oSerialOld, _
+                        "CP_Transfer_Serial", _
+                        lsSQL, , , _
+                        "sSerialNo")
+            
+            If lsSQL <> "" Then
+               p_oAppDrivr.Execute lsSQL, "CP_Transfer_Serial", Left(.Fields("sTransNox"), 2)
+            End If
+                        
+            'Get all serials
+            lsSerial = lsSerial & ", " & .Fields("sSerialID")
+            
+            p_oCPTrans.Serial(lnEntryNox, lnCtr - 1, "sSerialID") = .Fields("sSerialID")
+            p_oCPTrans.Serial(lnEntryNox, lnCtr - 1, "sSerialNo") = .Fields("sSerialNo")
+            lnSerial = lnSerial + 1
+            .MoveNext
+         Next
+         
+         'Delete previous serials that are not existing up to this time
+         If p_oBaseClas.EditMode <> xeModeAddNew Then
+            'Delete based on Old nEntryNox
+            lsSQL = "SELECT * " & _
+                   " FROM CP_Transfer_Serial" & _
+                   " WHERE sTransNox = " & strParm(.Fields("sTransNox")) & _
+                     " AND nEntryNox = " & lnOldEntry & _
+                     " AND sSerialID NOT IN (" & Mid(lsSerial, 2) & ")"
+            Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+            
+            If lors.RecordCount > 0 Then
+               lsSQL = "DELETE FROM CP_Transfer_Serial" & _
+                      " WHERE sTransNox = " & strParm(.Fields("sTransNox")) & _
+                        " AND nEntryNox = " & lnOldEntry & _
+                        " AND sSerialID NOT IN (" & Mid(lsSerial, 2) & ")"
+               p_oAppDrivr.Execute lsSQL, "CP_Transfer_Serial", Left(.Fields("sTransNox"), 2)
+            End If
+         End If
+      End If
+   End With
+   
+   saveSerial = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Function deleteSerial() As Boolean
+   Dim lsProcName As String
+   Dim lsSQL As String
+   Dim lors As adodb.Recordset
+   Dim lnCtr As Integer
+   
+   lsProcName = "deleteSerial"
+   On Error GoTo errProc
+
+   With p_oSerial
+      lsSQL = "DELETE FROM CP_Transfer_Serial" & _
+             " WHERE sTransNox = " & strParm(.Fields("sTransNox"))
+      p_oAppDrivr.Execute lsSQL, "CP_Transfer_Serial", Left(.Fields("sTransNox"), 2), .Fields("sDestinat")
+   End With
+   
+   deleteSerial = True
+   
+endProc:
+   Exit Function
+errProc:
+   ShowError lsProcName & "( " & " )"
+End Function
+
+Private Sub Class_Initialize()
+   p_nTranStat = xeStateUnknown
+End Sub
+
+Private Sub Class_Terminate()
+   Set p_oBaseClas = Nothing
+   Set p_oSerialOld = Nothing
+   Set p_oCPTrans = Nothing
+   Set p_oSerial = Nothing
+End Sub
+
+Private Sub p_oBaseClas_DetailRetrieved(ByVal Index As Integer)
+   RaiseEvent DetailRetrieved(Index)
+End Sub
+
+Private Sub p_oBaseClas_InitMaster()
+   Dim lsProcName As String
+   
+   lsProcName = "p_oBaseClas_InitMaster"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   With p_oBaseClas
+      .Master("sTransNox") = GetNextCode(.MasterTable, "sTransNox", True, _
+                                 p_oAppDrivr.Connection, True, p_sBranchCd)
+      .Master("dTransact") = p_oAppDrivr.ServerDate
+      .Master("sDestinat") = ""
+      .Master("sReferNox") = ""
+      .Master("sRequestx") = ""
+      .Master("sRemarksx") = ""
+      .Master("sReceived") = ""
+      .Master("dReceived") = p_oAppDrivr.ServerDate
+      .Master("sApproved") = ""
+      .Master("cTranStat") = xeStateOpen
+      .Master("nEntryNox") = 1
+      
+      .Detail(0, "nEntryNox") = 1
+      .Detail(0, "sBarrCode") = ""
+      .Detail(0, "sDescript") = ""
+      .Detail(0, "sModelNme") = ""
+      .Detail(0, "nQtyOnHnd") = 0
+      .Detail(0, "nUnitPrce") = 0#
+      .Detail(0, "nQuantity") = 0
+      .Detail(0, "sTransNox") = .Master("sTransNox")
+      .Detail(0, "sStockIDx") = ""
+      .Detail(0, "nLedgerNo") = 0
+      .Detail(0, "cHsSerial") = xeNo
+   End With
+
+   Call createSerialTable
+   
+   'Initialized Old serial
+   lsSQL = "SELECT a.sSerialID" & _
+                ", b.sSerialNo" & _
+                ", a.nEntryNox" & _
+                ", a.sTransNox" & _
+          " FROM CP_Transfer_Serial a" & _
+              ", CP_Inventory_Serial b" & _
+          " WHERE 1=0" & _
+          " ORDER BY a.nEntryNox"
+  
+   Set p_oSerialOld = New adodb.Recordset
+   p_oSerialOld.Open lsSQL, p_oAppDrivr, adOpenKeyset, adLockOptimistic, adCmdText
+   Set p_oSerialOld.ActiveConnection = Nothing
+   
+endProc:
+   Exit Sub
+errProc:
+    ShowError lsProcName & "( " & " )"
+End Sub
+
+Private Sub p_oBaseClas_LoadOthers()
+   Dim bHasSerial As Boolean
+   With p_oBaseClas
+      p_sAddressx = .Master("xAddressx")
+      For pnCtr = 0 To .ItemCount - 1
+         .Detail(pnCtr, "nQtyOnHnd") = .Detail(pnCtr, "xQtyOnHnd")
+                     
+         'Load Serials if the stock is serialized
+         If bHasSerial = False And .Detail(pnCtr, "cHsSerial") = xeYes Then
+            bHasSerial = True
+         End If
+      Next
+      If bHasSerial Then
+         Call loadSerialOnCache
+      End If
+   End With
+End Sub
+
+Private Sub p_oBaseClas_MasterRetrieved(ByVal Index As Integer)
+   RaiseEvent MasterRetrieved(Index)
+End Sub
+
+Private Sub p_oBaseClas_Save(Saved As Boolean)
+   Saved = Not pbModified
+End Sub
+
+Private Sub p_oBaseClas_SaveOthers(Cancel As Boolean)
+   Dim lors As Recordset
+   Dim lsEntryNox As String
+   Dim lsProcName As String
+   Dim lsSQL As String
+   
+   lsProcName = "p_oBaseClas_SaveOthers"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   Cancel = True
+
+   With p_oBaseClas
+      With p_oCPTrans
+         .Branch = p_sBranchCd
+         Set .AppDriver = p_oAppDrivr
+         If .InitTransaction() = False Then GoTo endProc
+      End With
+      lsStockIDx = ""
+      For pnCtr = 0 To .ItemCount - 1
+         If .Detail(pnCtr, "sStockIDx") = "" Then Exit For
+         
+         p_oCPTrans.Detail(pnCtr, "sStockIDx") = .Detail(pnCtr, "sStockIDx")
+         p_oCPTrans.Detail(pnCtr, "nQuantity") = .Detail(pnCtr, "nQuantity")
+         p_oCPTrans.Detail(pnCtr, "nQtyOnHnd") = .Detail(pnCtr, "nQtyOnHnd")
+         p_oCPTrans.Detail(pnCtr, "nLedgerNo") = IIf(.Detail(pnCtr, "nLedgerNo") = "", 0, .Detail(pnCtr, "nLedgerNo"))
+         p_oCPTrans.Detail(pnCtr, "cHsSerial") = .Detail(pnCtr, "cHsSerial")
+             
+         'Transfer serials to the clsCPTransfer object if serialized
+         lsEntryNox = lsEntryNox & ", " & pnCtr
+         If .Detail(pnCtr, "cHsSerial") = xeYes Then
+            If saveSerial( _
+               pnCtr, _
+               .Detail(pnCtr, "nQuantity"), _
+               .DetailOriginal(pnCtr, "nEntryNox")) Then GoTo endProc
+            End If
+         End If
+      Next
+      
+      If .EditMode <> xeModeAddNew Then
+         lsSQL = "SELECT *" & _
+                " FROM CP_Transfer_Serial" & _
+                " WHERE sTransNox = " & strParm(.Master("sTransNox")) & _
+                  " AND nEntryNox NOT IN (" & Mid(lsEntryNox, 2) & ")"
+         Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+         
+         If lors.RecordCount > 0 Then
+            lsSQL = "DELETE" & _
+                   " FROM CP_Transfer_Serial" & _
+                   " WHERE sTransNox = " & strParm(.Master("sTransNox")) & _
+                     " AND nEntryNox NOT IN (" & Mid(lsEntryNox, 2) & ")"
+           p_oAppDrivr.Execute lsSQL, "CP_Transfer_Serial", Left(.Master("sTransNox"), 2), .Master("sDestinat")
+         End If
+      End If
+               
+      ' if a CP_Inventory is not successfully updated, cancel saving.
+      If p_oCPTrans.Delivery(.Master("sTransNox"), _
+            .Master("dTransact"), _
+            .EditMode) = False Then
+         GoTo endProc
+      End If
+      
+      ' check if reorder level of some parts has reached
+      If p_oCPTrans.ReOrderParts Then
+         MsgBox "Some Parts Included in the Transaction has Reached it Reorder Level Limit!!!" & _
+                  vbCrLf & vbCrLf & "Please Inform the CP_Inventory Manager on this Alert!!!", _
+                  vbInformation, "Notice"
+      End If
+      
+   End With
+   
+   Cancel = False
+
+endProc:
+   Exit Sub
+errProc:
+   ShowError lsProcName & "( " & Cancel & " )"
+End Sub
+
+Private Sub p_oBaseClas_WillCancel(Cancel As Boolean)
+   Dim lsProcName As String
+   
+   lsProcName = "p_oBaseClas_WillCancel"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   Cancel = Not delSPTransaction
+
+endProc:
+   Exit Sub
+errProc:
+    ShowError lsProcName & "( " & Cancel & " )"
+End Sub
+
+Private Sub p_oBaseClas_WillDelete(Cancel As Boolean)
+   Dim lsProcName As String
+   Dim lsSQL As String
+   Dim lnCtr As Long
+   
+   lsProcName = "p_oBaseClas_WillDelete"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   
+   Cancel = Not delSPTransaction
+
+endProc:
+   Exit Sub
+errProc:
+   ShowError lsProcName & "( " & Cancel & " )"
+End Sub
+
+Private Sub p_oBaseClas_WillSave(Cancel As Boolean)
+   Dim lsProcName As String
+
+   lsProcName = "p_oBaseClas_WillSave"
+   'Debug.Print pxeMODULENAME & "." & lsProcName
+   On Error GoTo errProc
+   Cancel = True
+
+   pbModified = True
+   With p_oBaseClas
+      If .isMasterModify = False And .isDetailModify = False Then
+         pbModified = False
+         Cancel = False
+         GoTo endProc
+      End If
+   
+      'MS-2007.12.18
+      If .EditMode = xeModeAddNew Then
+         .Master("sTransNox") = GetNextCode(.MasterTable, "sTransNox", True, _
+                                    p_oAppDrivr.Connection, True, p_sBranchCd)
+      End If
+   
+      For pnCtr = 0 To .ItemCount - 1
+         If .Detail(pnCtr, "sStockIDx") = "" Then Exit For
+         
+         .Detail(pnCtr, "sTransNox") = .Master("sTransNox")
+         .Detail(pnCtr, "nEntryNox") = pnCtr + 1
+            
+      Next
+   End With
+   
+   Cancel = False
+
+endProc:
+   Exit Sub
+errProc:
+   ShowError lsProcName & "( " & Cancel & " )"
+End Sub
+
+Private Sub ShowError(ByVal lsProcName As String)
+    With p_oAppDrivr
+        .xLogError Err.Number, Err.Description, pxeMODULENAME, lsProcName, Erl
+    End With
+    With Err
+        .Raise .Number, .Source, .Description
+    End With
+End Sub
