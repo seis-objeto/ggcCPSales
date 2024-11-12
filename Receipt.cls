@@ -263,9 +263,10 @@ End Sub
 Sub ShowReceipt()
    If p_oAppDrivr Is Nothing Then Exit Sub
 
-   Load p_oForm
    With p_oForm
       Set .Sales = p_oCPSales
+      
+      Load p_oForm
       .Client = p_oClient
       .txtField(0) = p_sUserName
       .txtField(0).Tag = .txtField(0)
