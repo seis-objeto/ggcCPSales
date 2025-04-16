@@ -10,6 +10,7 @@ Begin VB.Form frmReceipt
    ClientWidth     =   12360
    KeyPreview      =   -1  'True
    LinkTopic       =   "Form1"
+   LockControls    =   -1  'True
    ScaleHeight     =   10080
    ScaleWidth      =   12360
    ShowInTaskbar   =   0   'False
@@ -18,14 +19,14 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   18
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   555
+      Height          =   495
       Index           =   17
       Left            =   8595
       TabIndex        =   61
@@ -38,19 +39,19 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   18
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   555
+      Height          =   495
       Index           =   21
       Left            =   8595
       TabIndex        =   49
       Text            =   "0.00"
-      Top             =   2685
+      Top             =   2610
       Width           =   3595
    End
    Begin VB.TextBox txtField 
@@ -58,19 +59,19 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   18
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   555
+      Height          =   495
       Index           =   20
       Left            =   8595
       TabIndex        =   13
       Text            =   "0.00"
-      Top             =   3240
+      Top             =   3120
       Width           =   3595
    End
    Begin VB.TextBox txtField 
@@ -78,19 +79,19 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   18
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   555
+      Height          =   495
       Index           =   19
       Left            =   8595
       TabIndex        =   11
       Text            =   "0.00"
-      Top             =   2145
+      Top             =   2100
       Width           =   3595
    End
    Begin VB.TextBox txtField 
@@ -158,7 +159,7 @@ Begin VB.Form frmReceipt
       ScaleWidth      =   11865
       TabIndex        =   46
       Tag             =   "wt0;fb0"
-      Top             =   3850
+      Top             =   3660
       Width           =   11920
       Begin VB.TextBox txtField 
          BeginProperty Font 
@@ -328,7 +329,7 @@ Begin VB.Form frmReceipt
       ScaleWidth      =   11865
       TabIndex        =   47
       Tag             =   "wt0;fb0"
-      Top             =   6190
+      Top             =   6000
       Width           =   11920
       Begin VB.TextBox txtField 
          Height          =   360
@@ -1031,9 +1032,9 @@ Begin VB.Form frmReceipt
       ForeColor       =   &H8000000E&
       Height          =   240
       Index           =   0
-      Left            =   6450
+      Left            =   6435
       TabIndex        =   62
-      Top             =   1747
+      Top             =   1717
       Width           =   2115
    End
    Begin VB.Label lblField 
@@ -1056,7 +1057,7 @@ Begin VB.Form frmReceipt
       Index           =   21
       Left            =   6615
       TabIndex        =   48
-      Top             =   2827
+      Top             =   2737
       Width           =   1950
    End
    Begin VB.Label lblField 
@@ -1079,7 +1080,7 @@ Begin VB.Form frmReceipt
       Index           =   20
       Left            =   6450
       TabIndex        =   12
-      Top             =   3382
+      Top             =   3247
       Width           =   2115
    End
    Begin VB.Label lblField 
@@ -1102,7 +1103,7 @@ Begin VB.Form frmReceipt
       Index           =   19
       Left            =   6555
       TabIndex        =   10
-      Top             =   2287
+      Top             =   2227
       Width           =   2010
    End
    Begin VB.Label lblField 
@@ -1200,6 +1201,7 @@ Begin VB.Form frmReceipt
    End
    Begin VB.Label lblField 
       Alignment       =   1  'Right Justify
+      AutoSize        =   -1  'True
       BackColor       =   &H001778E7&
       BackStyle       =   0  'Transparent
       Caption         =   "Change Amount:"
@@ -1213,12 +1215,12 @@ Begin VB.Form frmReceipt
          Strikethrough   =   0   'False
       EndProperty
       ForeColor       =   &H8000000E&
-      Height          =   555
+      Height          =   360
       Index           =   16
-      Left            =   4785
+      Left            =   4890
       TabIndex        =   44
-      Top             =   8440
-      Width           =   2460
+      Top             =   8475
+      Width           =   2355
    End
    Begin VB.Shape Shape1 
       BorderColor     =   &H00FFFFFF&
@@ -1290,8 +1292,8 @@ Begin VB.Form frmReceipt
       Height          =   750
       Left            =   7320
       TabIndex        =   45
-      Top             =   8440
-      Width           =   4855
+      Top             =   8280
+      Width           =   4860
    End
 End
 Attribute VB_Name = "frmReceipt"
@@ -1669,7 +1671,7 @@ Private Sub Form_Load()
                      ", nDiscAmtx" & _
                      ", nSCDiscxx" & _
                   " FROM Discount_Card_Detail" & _
-                  " WHERE sDivisnID = " & strparm("MP")
+                  " WHERE sDivisnID = " & strParm("MP")
    Call initDisc
    txtField(19) = "0.00"
    txtField(20) = Format(p_oCPSales.TITU.TranTotl(), "#,##0.00")
@@ -1683,6 +1685,8 @@ End Sub
 Private Sub Form_Initialize()
    p_bCancelxx = False
 End Sub
+
+
 
 Private Sub p_oCPSales_MasterRetrieved(ByVal Index As Integer)
    txtField(17) = Format(p_oCPSales.Master("nReplAmtx"), "#,##0.00")
@@ -1700,10 +1704,10 @@ Private Sub txtField_Change(Index As Integer)
       lnCashAmt = 0#
       lnChkAmtx = 0#
       lnCardAmt = 0#
-      If IsNumeric(txtField(3).Text) Then lnCashAmt = CDbl(txtField(3).Text) + CDbl(txtField(17))
+      If IsNumeric(txtField(3).Text) Then lnCashAmt = CDbl(txtField(3).Text) + CDbl(txtField(17)) + CDbl(txtField(20)) + CDbl(txtField(21))
       If IsNumeric(txtField(8).Text) Then lnChkAmtx = CDbl(txtField(8).Text)
       If IsNumeric(txtField(13).Text) Then lnCardAmt = CDbl(txtField(13).Text)
-      lnTotlAmt = lnCashAmt + lnChkAmtx + lnCardAmt + CDbl(txtField(20).Text) + CDbl(txtField(21))   'p_oCPSales.Master("nTranTotl")
+      lnTotlAmt = lnCashAmt + lnChkAmtx + lnCardAmt '+ CDbl(txtField(20).Text) + CDbl(txtField(21))   'p_oCPSales.Master("nTranTotl")
       lnChangex = lnTotlAmt - p_oCPSales.Master("nTranTotl")  'lnTotlAmt - p_nAmtPaidx
       
       lblChangeAmount = Format(lnChangex, "#,##0.00")
@@ -2008,7 +2012,7 @@ Private Function getDiscounts(ByVal lsCardID) As Boolean
    'On Error GoTo errProc
    
    Set p_oDiscount = New Recordset
-   p_oDiscount.Open AddCondition(p_sDiscSQL, "sCardIDxx = " & strparm(lsCardID)), _
+   p_oDiscount.Open AddCondition(p_sDiscSQL, "sCardIDxx = " & strParm(lsCardID)), _
          p_oAppDrivr.Connection, adOpenStatic, adLockOptimistic, adCmdText
    
    Debug.Print p_sDiscSQL
@@ -2041,11 +2045,11 @@ Private Function getBanks(ByVal lsValue As String, _
                & "  sBankIDxx" _
                & ", sBankName" _
             & " FROM Banks" _
-            & " WHERE cRecdStat = " & strparm(xeRecStateActive) _
+            & " WHERE cRecdStat = " & strParm(xeRecStateActive) _
                & IIf(Not lbByCode _
-               , IIf(Not lbExact, " AND sBankName LIKE " & strparm(lsValue & "%") _
-               , " AND sBankName = " & strparm(lsValue)) _
-               , " AND sBankIDxx = " & strparm(lsValue)) _
+               , IIf(Not lbExact, " AND sBankName LIKE " & strParm(lsValue & "%") _
+               , " AND sBankName = " & strParm(lsValue)) _
+               , " AND sBankIDxx = " & strParm(lsValue)) _
             & " ORDER BY sBankName"
    
    Set lrs = New Recordset
@@ -2104,11 +2108,11 @@ Private Function getCardTpye(ByVal lsValue As String, _
                & "  sCardIDxx" _
                & ", sCardName" _
             & " FROM Card" _
-            & " WHERE cRecdStat = " & strparm(xeRecStateActive) _
+            & " WHERE cRecdStat = " & strParm(xeRecStateActive) _
                & IIf(Not lbByCode _
-               , IIf(Not lbExact, " AND sCardName LIKE " & strparm(lsValue & "%") _
-               , " AND sCardName = " & strparm(lsValue)) _
-               , " AND sCardIDxx = " & strparm(lsValue)) _
+               , IIf(Not lbExact, " AND sCardName LIKE " & strParm(lsValue & "%") _
+               , " AND sCardName = " & strParm(lsValue)) _
+               , " AND sCardIDxx = " & strParm(lsValue)) _
             & " ORDER BY sCardName"
    
    Set lrs = New Recordset
@@ -2160,11 +2164,11 @@ Private Function getDiscCard(ByVal lsValue As String, _
                & "  sCardIDxx" _
                & ", sCardDesc" _
             & " FROM Discount_Card" _
-            & " WHERE cRecdStat = " & strparm(xeRecStateActive) _
+            & " WHERE cRecdStat = " & strParm(xeRecStateActive) _
                & IIf(Not lbByCode _
-               , IIf(Not lbExact, " AND sCardDesc LIKE " & strparm(lsValue & "%") _
-               , " AND sCardDesc = " & strparm(lsValue)) _
-               , " AND sCardIDxx = " & strparm(lsValue)) _
+               , IIf(Not lbExact, " AND sCardDesc LIKE " & strParm(lsValue & "%") _
+               , " AND sCardDesc = " & strParm(lsValue)) _
+               , " AND sCardIDxx = " & strParm(lsValue)) _
             & " ORDER BY sCardDesc"
    
    Set lrs = New Recordset
@@ -2231,17 +2235,17 @@ Private Function getSalesman(ByVal Value As String, ByVal Search As Boolean) As 
                ", CONCAT(sFrstName, ' ',LEFT(sLastName, 1), '.') AS xSalesman" & _
                ", CONCAT(sFrstName, ' ', sLastName) as xFullName" & _
             " FROM Salesman" & _
-            " WHERE sBranchCd = " & strparm(p_sBranchCd) & _
-               " AND cRecdStat = " & strparm(xeRecStateActive) & _
+            " WHERE sBranchCd = " & strParm(p_sBranchCd) & _
+               " AND cRecdStat = " & strParm(xeRecStateActive) & _
             " ORDER BY CONCAT(sFrstName, ' ', LEFT(sLastName, 1))"
    
    If Value <> "" Then
       If Search Then
-         lsSQL = AddCondition(lsSQL, "CONCAT(sFrstName, ' ', sLastName) LIKE " & strparm(Trim(Value) & "%") & _
-                                       "OR sEmployID = " & strparm(Value))
+         lsSQL = AddCondition(lsSQL, "CONCAT(sFrstName, ' ', sLastName) LIKE " & strParm(Trim(Value) & "%") & _
+                                       "OR sEmployID = " & strParm(Value))
       Else
-         lsSQL = AddCondition(lsSQL, "CONCAT(sFrstName, ' ', sLastName) = " & strparm(Trim(Value)) & _
-                                       "OR sEmployID = " & strparm(Value))
+         lsSQL = AddCondition(lsSQL, "CONCAT(sFrstName, ' ', sLastName) = " & strParm(Trim(Value)) & _
+                                       "OR sEmployID = " & strParm(Value))
       End If
    ElseIf Search = False Then
       getSalesman = ""
@@ -2356,7 +2360,7 @@ Private Function prcDiscount(ByVal lnRow As Long) As Boolean
                   ", IFNULL(sCategID4, '') sCategID4" & _
                   ", IFNULL(sCategID5, '') sCategID5" & _
                " FROM CP_Inventory" & _
-               " WHERE sStockIDx = " & strparm(.Detail(lnRow, "sStockIDx"))
+               " WHERE sStockIDx = " & strParm(.Detail(lnRow, "sStockIDx"))
                
       Debug.Print lsSQL
       Set lors = New Recordset
@@ -2520,7 +2524,7 @@ Private Function isTransValid(ByVal fdTranDate As Date, _
    isTransValid = True
    
    Set lors = New Recordset
-   lors.Open "SELECT dUnEncode FROM Branch_Others WHERE sBranchCd = " & strparm(p_oAppDrivr.BranchCode) _
+   lors.Open "SELECT dUnEncode FROM Branch_Others WHERE sBranchCd = " & strParm(p_oAppDrivr.BranchCode) _
    , p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
    
    If lors.EOF Then Exit Function
@@ -2532,8 +2536,8 @@ Private Function isTransValid(ByVal fdTranDate As Date, _
       'recode the alidation of unencoded transaction
       If DateDiff("d", lors("dUnEncode"), fdTranDate) >= 0 Then
          'check the DTR_Summary here here
-         lsSQL = "SELECT cPostedxx FROM DTR_Summary WHERE sBranchCd = " & strparm(p_oAppDrivr.BranchCode) & _
-                  " AND sTranDate = " & strparm(Format(fdTranDate, "YYYYMMDD"))
+         lsSQL = "SELECT cPostedxx FROM DTR_Summary WHERE sBranchCd = " & strParm(p_oAppDrivr.BranchCode) & _
+                  " AND sTranDate = " & strParm(Format(fdTranDate, "YYYYMMDD"))
          Debug.Print lsSQL
          Set lors = New Recordset
          lors.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
@@ -2553,12 +2557,12 @@ Private Function isTransValid(ByVal fdTranDate As Date, _
                   ", DTR_Summary_Detail b" & _
                   " WHERE a.sBranchCd = b.sBranchCd" & _
                   " AND a.sTranDate = b.sTranDate" & _
-                  " AND a.sBranchCd = " & strparm(p_oAppDrivr.BranchCode) & _
-                  " AND a.sTranDate = " & strparm(Format(fdTranDate, "YYYYMMDD")) & _
-                  " AND b.sTranType = " & strparm(fsTranType) & _
-                  " AND b.sReferNox = " & strparm(fsReferNox) & _
+                  " AND a.sBranchCd = " & strParm(p_oAppDrivr.BranchCode) & _
+                  " AND a.sTranDate = " & strParm(Format(fdTranDate, "YYYYMMDD")) & _
+                  " AND b.sTranType = " & strParm(fsTranType) & _
+                  " AND b.sReferNox = " & strParm(fsReferNox) & _
                   " AND b.nTranAmtx = " & fsAmountxx & _
-                  " AND b.cHasEntry = " & strparm(xeNo)
+                  " AND b.cHasEntry = " & strParm(xeNo)
                Debug.Print lsSQL
                Set lors = New Recordset
                lors.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText

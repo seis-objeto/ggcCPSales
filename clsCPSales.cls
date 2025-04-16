@@ -403,7 +403,7 @@ End Function
 Function deleteCardItem(ByVal Row As Long) As Boolean
    Dim lsProcName As String
    Dim lsSQL As String
-   Dim loRS As ADODB.Recordset
+   Dim lors As ADODB.Recordset
    Dim lnCtr As Integer
    
    lsProcName = "deleteCard"
@@ -529,7 +529,7 @@ End Function
 Private Function deleteAccessory() As Boolean
    Dim lsProcName As String
    Dim lsSQL As String
-   Dim loRS As ADODB.Recordset
+   Dim lors As ADODB.Recordset
    Dim lnCtr As Integer
    
    lsProcName = "deleteAccessory"
@@ -1145,7 +1145,7 @@ End Function
 Function CloseTransaction(ByVal sTransNo As String) As Boolean
    Dim lsProcName As String
    Dim Cancel As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    lsProcName = "CloseTransaction"
    Debug.Print pxeMODULENAME & "." & lsProcName
@@ -1153,27 +1153,31 @@ Function CloseTransaction(ByVal sTransNo As String) As Boolean
    
 '   If TypeName(p_oReturn) <> "Nothing" Then
       If p_oBaseClas.Master("nReplAmtx") > 0 Then
-         Set loRS = New Recordset
-         loRS.Open "SELECT * FROM CP_SO_Return_Master WHERE sReferNox = " & strParm(p_oBaseClas.Master("sTransNox")), p_oAppDrivr.Connection, , , adCmdText
-         If loRS.EOF Then
+         Set lors = New Recordset
+         lors.Open "SELECT * FROM CP_SO_Return_Master WHERE sReferNox = " & strParm(p_oBaseClas.Master("sTransNox")), p_oAppDrivr.Connection, , , adCmdText
+         If lors.EOF Then
             Cancel = False
          Else
-            Dim loReturn As clsCPSalesReturn
-            Set loReturn = New clsCPSalesReturn
-            Set loReturn.AppDriver = p_oAppDrivr
-            loReturn.InitTransaction
-            If Not loReturn.OpenTransaction(loRS("sTransNox")) Then
-               MsgBox "Unable to open sales return" & vbCrLf & _
-                        " Pls contact SEG/SSG for assistance", vbCritical, "Warning"
-               Cancel = True
-               GoTo endProc
+            If p_oBaseClas.Master("cTranStat") = xeStateOpen Then
+                 Dim loReturn As clsCPSalesReturn
+                 Set loReturn = New clsCPSalesReturn
+                 Set loReturn.AppDriver = p_oAppDrivr
+                 loReturn.InitTransaction
+                 
+                 If Not loReturn.OpenTransaction(lors("sTransNox")) Then
+                    MsgBox "Unable to open sales return" & vbCrLf & _
+                             " Pls contact SEG/SSG for assistance", vbCritical, "Warning"
+                    Cancel = True
+                    GoTo endProc
+                 Else
+                    Cancel = Not loReturn.CloseTransaction(lors("sTransNox"))
+                    If Cancel = True Then GoTo endProc
+                 End If
+               Set lors = Nothing
             Else
-               Cancel = Not loReturn.CloseTransaction(loRS("sTransNox"))
-               If Cancel = True Then GoTo endProc
+               Cancel = False
             End If
-          End If
-          
-          Set loRS = Nothing
+         End If
       Else
          If Not p_oFinancer.EOF Then
             If p_oFinancer("sClientID") <> "" And _
@@ -1277,7 +1281,7 @@ Function SearchReferNo(ByVal Index As Variant, _
    Dim lsCondition1 As String
    Dim lsCondition2 As String
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsBrowse As String
    Dim lsSelected() As String
 
@@ -1307,13 +1311,13 @@ Function SearchReferNo(ByVal Index As Variant, _
    lsSQL = Replace(p_oBaseClas.BrowseDetailQuery(0), "xCondition1", lsCondition1)
    lsSQL = Replace(lsSQL, "xCondition2", lsCondition2)
    
-   Set loRS = New Recordset
+   Set lors = New Recordset
    Debug.Print lsSQL
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
    
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      SearchReferNo = loRS("xReferNox")
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      SearchReferNo = lors("xReferNox")
    Else
       lsBrowse = KwikSearch(p_oAppDrivr, lsSQL _
                            , "xReferNox»xDescript»sBrandNme»sModelNme»nSelPrice»nQtyOnHnd" _
@@ -1328,7 +1332,7 @@ Function SearchReferNo(ByVal Index As Variant, _
    End If
    
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 errProc:
    ShowError lsOldProc & " ( " & Index _
@@ -1575,7 +1579,7 @@ Function AddGCare() As Boolean
    Dim lasSplit() As String
    Dim lnCtr As Integer
    Dim lnPrice As Double
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    AddGCare = False
    lsOldProc = "addGCare"
@@ -1615,12 +1619,12 @@ Function AddGCare() As Boolean
                " AND " & lnPrice & " BETWEEN b.nAmountFr AND b.nAmountTo"
                
    Debug.Print lsSQL
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
-   Set loRS.ActiveConnection = Nothing
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+   Set lors.ActiveConnection = Nothing
    
    lsSQL = KwikBrowse(p_oAppDrivr, _
-                        loRS, _
+                        lors, _
                         "sBarrcode»sDescript»nSelPrice»sStockIDx", _
                         "Barcode»Description»SRP»ID")
                         
@@ -1653,7 +1657,7 @@ Private Function getDetail(ByVal lnRow As Integer, _
    Dim lsOldProc As String
    Dim lnCtr As Integer
    Dim lsQueryOld As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
 
    'On Error GoTo errProc
    getDetail = False
@@ -1764,20 +1768,20 @@ Private Function getDetail(ByVal lnRow As Integer, _
       'kalyptus - 2022.10.10 02.50pm
       'Check if branch is Biyaheng Fiesta
       '#Tag:Biyaheng Fiesta
-      If p_sBranchCd = "C0M2" Then
-         Set loRS = getMFDiscountPrice(lnRow)
-         If Not loRS.EOF Then
+      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C122" Then
+         Set lors = getMFDiscountPrice(lnRow)
+         If Not lors.EOF Then
             If MsgBox("Please ask the customer of PAYMENT MODE." & _
                         "Press YES if CASH PAYMENT, otherwise press NO.", vbQuestion + vbYesNo, "Confirm") = vbYes Then
-               .Detail(lnRow, "nSelPrice") = loRS("nUnitprce")
-               .Detail(lnRow, "nUnitPrce") = loRS("nUnitprce")
-               .Detail(lnRow, "nDiscRate") = loRS("nDiscRate")
-               .Detail(lnRow, "nDiscAmtx") = loRS("nDiscAmtx")
+               .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
+               .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
+               .Detail(lnRow, "nDiscRate") = lors("nDiscRate")
+               .Detail(lnRow, "nDiscAmtx") = lors("nDiscAmtx")
             Else
-               .Detail(lnRow, "nSelPrice") = loRS("nUnitprce")
-               .Detail(lnRow, "nUnitPrce") = loRS("nUnitprce")
-               .Detail(lnRow, "nDiscRate") = loRS("nCardRate")
-               .Detail(lnRow, "nDiscAmtx") = loRS("nCardAmtx")
+               .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
+               .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
+               .Detail(lnRow, "nDiscRate") = lors("nCardRate")
+               .Detail(lnRow, "nDiscAmtx") = lors("nCardAmtx")
             End If
          End If
       End If
@@ -1856,7 +1860,7 @@ End Function
 Private Function getAccessories(ByVal lnRow As Integer, _
                            ByVal lsValue As String, _
                            ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -1888,14 +1892,14 @@ Private Function getAccessories(ByVal lnRow As Integer, _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oAccessory("sAccessID") = loRS("sAccessID")
-      p_oAccessory("sDescript") = loRS("sDescript")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oAccessory("sAccessID") = lors("sAccessID")
+      p_oAccessory("sDescript") = lors("sDescript")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sAccessID»sDescript", _
                            "Code»Accessories", _
                            "@»@", _
@@ -1910,7 +1914,7 @@ Private Function getAccessories(ByVal lnRow As Integer, _
    getAccessories = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oAccessory("sAccessID") = ""
@@ -1926,7 +1930,7 @@ Private Function saveCPTransaction() As Boolean
    Dim lsProcName As String
    Dim lnRow As Integer
    Dim lnCtr As Integer
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    'Declare variable to be use as cache area...
    Dim lsStockIDx As String
@@ -1943,8 +1947,8 @@ Private Function saveCPTransaction() As Boolean
       If .InitTransaction(p_oAppDrivr) = False Then GoTo endProc
    End With
    
-   Set loRS = New Recordset
-   With loRS
+   Set lors = New Recordset
+   With lors
       .Fields.Append "sStockIDx", adVarChar, 12
       .Fields.Append "nQuantity", adInteger, 4
       .Fields.Append "nQtyOnHnd", adInteger, 4
@@ -1960,14 +1964,14 @@ Private Function saveCPTransaction() As Boolean
          'kalyptus 2024-07-02 11:48am
          'included all details except insurances: sCategID1 = 'C001052'
          If IFNull(.Detail(pnCtr, "sCategID1"), "") <> "C001052" Then
-            loRS.AddNew
-            loRS("sStockIDx") = .Detail(pnCtr, "sStockIDx")
-            loRS("nQuantity") = .Detail(pnCtr, "nQuantity")
-            loRS("nQtyOnHnd") = .Detail(pnCtr, "nQtyOnHnd")
-            loRS("nLedgerNo") = IIf(.Detail(pnCtr, "nLedgerNo") = "", 0, .Detail(pnCtr, "nLedgerNo"))
-            loRS("cHsSerial") = .Detail(pnCtr, "cHsSerial")
-            loRS("sSerialID") = .Detail(pnCtr, "sSerialID")
-            loRS("sSerialNo") = IFNull(.Detail(pnCtr, "sSerialNo"), "")
+            lors.AddNew
+            lors("sStockIDx") = .Detail(pnCtr, "sStockIDx")
+            lors("nQuantity") = .Detail(pnCtr, "nQuantity")
+            lors("nQtyOnHnd") = .Detail(pnCtr, "nQtyOnHnd")
+            lors("nLedgerNo") = IIf(.Detail(pnCtr, "nLedgerNo") = "", 0, .Detail(pnCtr, "nLedgerNo"))
+            lors("cHsSerial") = .Detail(pnCtr, "cHsSerial")
+            lors("sSerialID") = .Detail(pnCtr, "sSerialID")
+            lors("sSerialNo") = IFNull(.Detail(pnCtr, "sSerialNo"), "")
          End If
       Next
       
@@ -1981,26 +1985,26 @@ Private Function saveCPTransaction() As Boolean
          Debug.Print .Detail(pnCtr, "sStockIDx")
          If IFNull(.Detail(pnCtr, "sCategID1"), "") <> "C001052" Then
             If lsStockIDx <> .Detail(pnCtr, "sStockIDx") Then
-               loRS.Filter = "sStockIDx = " & strParm(.Detail(pnCtr, "sStockIDx"))
-               If loRS.EOF Then
+               lors.Filter = "sStockIDx = " & strParm(.Detail(pnCtr, "sStockIDx"))
+               If lors.EOF Then
                   MsgBox "No detail found!!!" & vbCrLf & _
                            "Please contact GGC/GMC SEG for assistance!!!", vbCritical, "Warning"
                End If
                
-               loCPTrans.Detail(lnEntryNox, "sStockIDx") = loRS("sStockIDx")
-               loCPTrans.Detail(lnEntryNox, "nQuantity") = loRS("nQuantity")
-               loCPTrans.Detail(lnEntryNox, "nQtyOnHnd") = loRS("nQtyOnHnd")
-               loCPTrans.Detail(lnEntryNox, "nLedgerNo") = loRS("nLedgerNo")
-               loCPTrans.Detail(lnEntryNox, "cHsSerial") = loRS("cHsSerial")
+               loCPTrans.Detail(lnEntryNox, "sStockIDx") = lors("sStockIDx")
+               loCPTrans.Detail(lnEntryNox, "nQuantity") = lors("nQuantity")
+               loCPTrans.Detail(lnEntryNox, "nQtyOnHnd") = lors("nQtyOnHnd")
+               loCPTrans.Detail(lnEntryNox, "nLedgerNo") = lors("nLedgerNo")
+               loCPTrans.Detail(lnEntryNox, "cHsSerial") = lors("cHsSerial")
                
                If .Detail(pnCtr, "cHsSerial") Then
-                  loCPTrans.Detail(lnEntryNox, "nQuantity") = loRS.RecordCount
+                  loCPTrans.Detail(lnEntryNox, "nQuantity") = lors.RecordCount
                   
-                  loRS.MoveFirst
-                  For lnCtr = 0 To loRS.RecordCount - 1
-                     loCPTrans.Serial(lnEntryNox, lnCtr, "sSerialID") = loRS("sSerialID")
-                     loCPTrans.Serial(lnEntryNox, lnCtr, "sSerialNo") = loRS("sSerialNo")
-                     loRS.MoveNext
+                  lors.MoveFirst
+                  For lnCtr = 0 To lors.RecordCount - 1
+                     loCPTrans.Serial(lnEntryNox, lnCtr, "sSerialID") = lors("sSerialID")
+                     loCPTrans.Serial(lnEntryNox, lnCtr, "sSerialNo") = lors("sSerialNo")
+                     lors.MoveNext
                   Next
                End If
                
@@ -2010,18 +2014,23 @@ Private Function saveCPTransaction() As Boolean
          End If
       Next
       
-      If Not loCPTrans.Sales(.Master("sTransNox") _
-                  , .Master("dTransact") _
-                  , .Master("sClientID") _
-                  , .EditMode) Then
+      If lors.RecordCount = 0 Then
+         saveCPTransaction = True
          GoTo endProc
+      End If
+      
+      If Not loCPTrans.Sales(.Master("sTransNox") _
+                     , .Master("dTransact") _
+                     , .Master("sClientID") _
+                     , .EditMode) Then
+            GoTo endProc
       End If
    End With
       
    saveCPTransaction = True
 
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Set loCPTrans = Nothing
    Exit Function
 errProc:
@@ -2034,7 +2043,7 @@ Private Function saveCPOtherInfo() As Boolean
    Dim lnRow As Integer
    Dim lsSQL As String
    Dim lsTransNo As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lnCtr As Integer
 
    lsProcName = "saveCPOtherInfo"
@@ -2088,35 +2097,35 @@ Private Function saveCPOtherInfo() As Boolean
                   ", dModified" & _
                " FROM CP_SO_Checks" & _
                " WHERE sTransNox = " & strParm(p_oBaseClas.Master("sTransNox"))
-      Set loRS = New Recordset
-      loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockOptimistic, adCmdText
-      Set loRS.ActiveConnection = Nothing
+      Set lors = New Recordset
+      lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockOptimistic, adCmdText
+      Set lors.ActiveConnection = Nothing
       
       lsTransNo = p_oBaseClas.Master("sTransNox")
-      If loRS.EOF Then
-         loRS.AddNew
+      If lors.EOF Then
+         lors.AddNew
          lsTransNo = ""
       End If
       
-      loRS("sTransNox") = p_oBaseClas.Master("sTransNox")
-      loRS("sBankIDxx") = p_xChecks.BankIDxx
-      loRS("dCheckDte") = p_xChecks.CheckDte
-      loRS("sCheckNox") = p_xChecks.CheckNox
-      loRS("nAmountxx") = p_xChecks.Amountxx
-      loRS("sAcctNoxx") = p_xChecks.AcctNoxx
-      loRS("cTranStat") = xeStateOpen
-      loRS("cDepositd") = 0
-      loRS("nClearing") = 0
-      loRS("cChckStat") = 0
+      lors("sTransNox") = p_oBaseClas.Master("sTransNox")
+      lors("sBankIDxx") = p_xChecks.BankIDxx
+      lors("dCheckDte") = p_xChecks.CheckDte
+      lors("sCheckNox") = p_xChecks.CheckNox
+      lors("nAmountxx") = p_xChecks.Amountxx
+      lors("sAcctNoxx") = p_xChecks.AcctNoxx
+      lors("cTranStat") = xeStateOpen
+      lors("cDepositd") = 0
+      lors("nClearing") = 0
+      lors("cChckStat") = 0
 
       lsSQL = ""
       If lsTransNo <> "" Then
-         lsSQL = ADO2SQL(loRS, _
+         lsSQL = ADO2SQL(lors, _
                          "CP_SO_Checks)", _
-                         "sTransNox = " & strParm(loRS("sTransNox")), , _
+                         "sTransNox = " & strParm(lors("sTransNox")), , _
                          p_oAppDrivr.ServerDate)
       Else
-         lsSQL = ADO2SQL(loRS, _
+         lsSQL = ADO2SQL(lors, _
                          "CP_SO_Checks", , , _
                          p_oAppDrivr.ServerDate)
       End If
@@ -2208,7 +2217,7 @@ errProc:
 End Function
 
 Private Function saveAccess() As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    Dim lsSerial As String
    Dim lnCtr As Integer
@@ -2275,10 +2284,10 @@ Private Function saveAccess() As Boolean
                 " FROM CP_SO_Accessories" & _
                 " WHERE sTransNox = " & strParm(.Fields("sTransNox")) & _
                   " AND sSerialNo NOT IN (" & Mid(lsSerial, 2) & ")"
-         Set loRS = New Recordset
-         loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+         Set lors = New Recordset
+         lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
 
-         If loRS.RecordCount > 0 Then
+         If lors.RecordCount > 0 Then
             lsSQL = "DELETE FROM CP_SO_Accessories" & _
                    " WHERE sTransNox = " & strParm(.Fields("sTransNox")) & _
                      " AND sSerialNo NOT IN (" & Mid(lsSerial, 2) & ")"
@@ -2301,7 +2310,7 @@ End Function
 
 Private Function delAccessOnCache(ByVal lnEntryNox As Integer) As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    
    lsProcName = "delAccessOnCache"
@@ -2324,7 +2333,7 @@ End Function
 
 Private Function loadAccessOnCache() As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    
    lsProcName = "loadAccessOnCache"
@@ -2370,7 +2379,7 @@ Private Function delCPTransaction() As Boolean
    Dim loCPTrans As clsCPInventoryTrans
    Dim lsProcName As String
    Dim lnCtr As Integer
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    'Declare variable to be use as cache area...
    Dim lsStockIDx As String
@@ -2386,8 +2395,8 @@ Private Function delCPTransaction() As Boolean
       loCPTrans.Branch = p_sBranchCd
       If loCPTrans.InitTransaction() = False Then GoTo endProc
               
-      Set loRS = New Recordset
-      With loRS
+      Set lors = New Recordset
+      With lors
          .Fields.Append "sStockIDx", adVarChar, 12
          .Fields.Append "nQuantity", adInteger, 4
          .Fields.Append "nQtyOnHnd", adInteger, 4
@@ -2402,14 +2411,14 @@ Private Function delCPTransaction() As Boolean
          'kalyptus 2024-07-02 11:48am
          'included all details except insurances: sCategID1 = 'C001052'
          If .Detail(pnCtr, "sCategID1") <> "C001052" Then
-            loRS.AddNew
-            loRS("sStockIDx") = .Detail(pnCtr, "sStockIDx")
-            loRS("nQuantity") = .Detail(pnCtr, "nQuantity")
-            loRS("nQtyOnHnd") = .Detail(pnCtr, "nQtyOnHnd")
-            loRS("nLedgerNo") = IIf(.Detail(pnCtr, "nLedgerNo") = "", 0, .Detail(pnCtr, "nLedgerNo"))
-            loRS("cHsSerial") = .Detail(pnCtr, "cHsSerial")
-            loRS("sSerialID") = .Detail(pnCtr, "sSerialID")
-            loRS("sSerialNo") = IFNull(.Detail(pnCtr, "sSerialNo"), "")
+            lors.AddNew
+            lors("sStockIDx") = .Detail(pnCtr, "sStockIDx")
+            lors("nQuantity") = .Detail(pnCtr, "nQuantity")
+            lors("nQtyOnHnd") = .Detail(pnCtr, "nQtyOnHnd")
+            lors("nLedgerNo") = IIf(.Detail(pnCtr, "nLedgerNo") = "", 0, .Detail(pnCtr, "nLedgerNo"))
+            lors("cHsSerial") = .Detail(pnCtr, "cHsSerial")
+            lors("sSerialID") = .Detail(pnCtr, "sSerialID")
+            lors("sSerialNo") = IFNull(.Detail(pnCtr, "sSerialNo"), "")
          End If
       Next
       
@@ -2423,25 +2432,25 @@ Private Function delCPTransaction() As Boolean
          'included all details except insurances: sCategID1 = 'C001052'
          If .Detail(pnCtr, "sCategID1") <> "C001052" Then
             If lsStockIDx <> .Detail(pnCtr, "sStockIDx") Then
-               loRS.Filter = "sStockIDx = " & strParm(.Detail(pnCtr, "sStockIDx"))
-               If loRS.EOF Then
+               lors.Filter = "sStockIDx = " & strParm(.Detail(pnCtr, "sStockIDx"))
+               If lors.EOF Then
                   MsgBox "No detail found!!!" & vbCrLf & _
                            "Please contact GGC/GMC SEG for assistance!!!", vbCritical, "Warning"
                End If
                
-               loCPTrans.Detail(lnEntryNox, "sStockIDx") = loRS("sStockIDx")
-               loCPTrans.Detail(lnEntryNox, "nQuantity") = loRS("nQuantity")
-               loCPTrans.Detail(lnEntryNox, "nQtyOnHnd") = loRS("nQtyOnHnd")
-               loCPTrans.Detail(lnEntryNox, "nLedgerNo") = loRS("nLedgerNo")
-               loCPTrans.Detail(lnEntryNox, "cHsSerial") = loRS("cHsSerial")
+               loCPTrans.Detail(lnEntryNox, "sStockIDx") = lors("sStockIDx")
+               loCPTrans.Detail(lnEntryNox, "nQuantity") = lors("nQuantity")
+               loCPTrans.Detail(lnEntryNox, "nQtyOnHnd") = lors("nQtyOnHnd")
+               loCPTrans.Detail(lnEntryNox, "nLedgerNo") = lors("nLedgerNo")
+               loCPTrans.Detail(lnEntryNox, "cHsSerial") = lors("cHsSerial")
                
                If .Detail(pnCtr, "cHsSerial") Then
-                  loCPTrans.Detail(lnEntryNox, "nQuantity") = loRS.RecordCount
+                  loCPTrans.Detail(lnEntryNox, "nQuantity") = lors.RecordCount
                   
-                  loRS.MoveFirst
-                  For lnCtr = 0 To loRS.RecordCount - 1
-                     loCPTrans.Serial(lnEntryNox, lnCtr, "sSerialID") = loRS("sSerialID")
-                     loRS.MoveNext
+                  lors.MoveFirst
+                  For lnCtr = 0 To lors.RecordCount - 1
+                     loCPTrans.Serial(lnEntryNox, lnCtr, "sSerialID") = lors("sSerialID")
+                     lors.MoveNext
                   Next
                End If
                
@@ -2509,7 +2518,7 @@ End Sub
 Private Function delOtherTrans() As Boolean
    Dim loCltTrans As clsClientTrans
    Dim loFinTrans As clsFinanceMaster
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    Dim lsSQL As String
    Dim lsClientID As String
@@ -2521,12 +2530,12 @@ Private Function delOtherTrans() As Boolean
    With p_oBaseClas
       If Not delCPTransaction() Then GoTo endProc
             
-      Set loRS = New Recordset
+      Set lors = New Recordset
       lsSQL = AddCondition(.DetailQuery, _
                   "a.sTransNox = " & strParm(.Master("sTransNox")))
       Debug.Print lsSQL
-      loRS.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
-      If loRS.EOF Then GoTo endProc
+      lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+      If lors.EOF Then GoTo endProc
       
       '@@@@
       If p_sApplicNo <> Empty Then
@@ -2561,10 +2570,10 @@ Private Function delOtherTrans() As Boolean
       
       'she 2018-11-28 2:27PM
       'delete CP_SO_Finance
-      Set loRS = New Recordset
+      Set lors = New Recordset
       lsSQL = "SELECT * FROM CP_SO_Finance WHERE sTransNox = " & strParm(.Master("sTransNox"))
-      loRS.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
-      If Not loRS.EOF Then
+      lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+      If Not lors.EOF Then
          lsSQL = "DELETE FROM CP_SO_Finance WHERE sTransNox = " & strParm(.Master("sTransNox"))
             If p_oAppDrivr.Execute(lsSQL, "CP_SO_Finance") <= 0 Then
                MsgBox "Unable to delete finance info!" & vbCrLf & _
@@ -2573,10 +2582,10 @@ Private Function delOtherTrans() As Boolean
             End If
       End If
       
-      Set loRS = New Recordset
+      Set lors = New Recordset
       lsSQL = "SELECT * FROM Other_Payment_Received WHERE sSourceCd = 'CPSl' AND sSourceNo = " & strParm(.Master("sTransNox"))
-      loRS.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
-      If Not loRS.EOF Then
+      lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+      If Not lors.EOF Then
          lsSQL = "DELETE FROM Other_Payment_Received WHERE sSourceCd = 'CPSl' AND sSourceNo = " & strParm(.Master("sTransNox"))
             If p_oAppDrivr.Execute(lsSQL, "Other_Payment_Received") <= 0 Then
                MsgBox "Unable to delete other payment info!" & vbCrLf & _
@@ -2598,7 +2607,7 @@ Private Function delOtherTrans() As Boolean
    delOtherTrans = True
    
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 errProc:
    ShowError lsProcName & "( " & " )"
@@ -3092,7 +3101,7 @@ Private Sub p_oBaseClas_WillSave(Cancel As Boolean)
    Dim lbCancel As Boolean
    Dim lnCtr As Integer
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    lsProcName = "p_oBaseClas_WillSave(" & Cancel & ")"
    Debug.Print pxeMODULENAME & "." & lsProcName
@@ -3291,13 +3300,13 @@ Private Function checkSRP() As Boolean
    lsProcName = "checkSRP"
    'On Error GoTo errProc
    
-   Dim loRS As New Recordset
-   loRS.Open "SELECT * FROM Branch_Others" & _
+   Dim lors As New Recordset
+   lors.Open "SELECT * FROM Branch_Others" & _
                " WHERE sBranchCd = " & strParm(p_oAppDrivr.BranchCode) _
    , p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
     
-   If Not loRS.EOF Then
-      If loRS.Fields("cPOSStart") = xeYes Then
+   If Not lors.EOF Then
+      If lors.Fields("cPOSStart") = xeYes Then
          checkSRP = True
          Exit Function
       End If
@@ -3525,7 +3534,7 @@ errProc:
 End Function
 
 Sub getCPSOReturn()
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsSQL As String
    
    If TypeName(p_oReturn) = "Nothing" Then
@@ -3566,10 +3575,10 @@ Sub getCPSOReturn()
                   " AND sClientID = " & strParm(p_oClient.Master("sClientID")) & _
                   " AND sSerialID = " & strParm(p_oReturn.Detail(0, "sSerialID"))
                   
-      Set loRS = New Recordset
-      loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
+      Set lors = New Recordset
+      lors.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
       
-      If Not loRS.EOF Then
+      If Not lors.EOF Then
          If getAccount(True) Then
             lsSQL = "UPDATE MC_AR_Master SET" & _
                         "  cAcctStat = " & strParm(xeActStatClosed) & _
@@ -3579,7 +3588,7 @@ Sub getCPSOReturn()
                         ", dClosedxx = " & dateParm(p_oBaseClas.Master("dTransact")) & _
                         ", sModified = " & strParm(p_oAppDrivr.UserID) & _
                         ", dModified = " & dateParm(p_oAppDrivr.ServerDate()) & _
-                     " WHERE sAcctNmbr = " & strParm(loRS("sAcctNmbr"))
+                     " WHERE sAcctNmbr = " & strParm(lors("sAcctNmbr"))
             
             If p_oAppDrivr.Execute(lsSQL, "MC_AR_Master", p_sBranchCd) = 0 Then
                psAcctNmbr = "INVALID"
@@ -3587,8 +3596,8 @@ Sub getCPSOReturn()
                Exit Sub
             End If
                   
-            p_oBaseClas.Master("sApplicNo") = loRS("sApplicNo")
-            psAcctNmbr = loRS("sAcctNmbr")
+            p_oBaseClas.Master("sApplicNo") = lors("sApplicNo")
+            psAcctNmbr = lors("sAcctNmbr")
          End If
       End If
    End If
@@ -3821,7 +3830,7 @@ End Sub
 
 Private Sub computeApprTotal()
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    p_oCredtCard("xApprTotl") = p_oCredtCard("nTranTotl")
    
@@ -3833,10 +3842,10 @@ Private Sub computeApprTotal()
             " AND a.sSourceCD = 'CPSl'" & _
             " AND a.sTransNox <> " & strParm(p_oBaseClas.Master("sTransNox"))
             
-   Set loRS = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+   Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
    
-   If Not loRS.EOF Then
-      p_oCredtCard("xApprTotl") = p_oCredtCard("xApprTotl") + loRS("nTranTotl")
+   If Not lors.EOF Then
+      p_oCredtCard("xApprTotl") = p_oCredtCard("xApprTotl") + lors("nTranTotl")
    End If
 End Sub
 
@@ -3845,7 +3854,7 @@ End Sub
 'revised saving of credit card
 Private Function saveCard() As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsTransNox As String
    Dim lnRow As Integer
    Dim lnCtr As Integer
@@ -3853,13 +3862,13 @@ Private Function saveCard() As Boolean
    'mac 2023.02.01
    ' if given card discount is not the supposed discount of the unit from Mobile_Fiesta_Serial
    With p_oBaseClas
-      If p_sBranchCd = "C0M2" Then
+      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C122" Then
          For lnCtr = 0 To .ItemCount - 1
             If .Detail(lnCtr, "cHsSerial") = xeYes Then
-               Set loRS = getMFDiscountPrice(lnCtr)
-               If Not loRS.EOF Then
-                  If .Detail(lnCtr, "nDiscAmtx") <> loRS("nCardAmtx") Or _
-                     .Detail(lnCtr, "nDiscRate") <> loRS("nCardRate") Then
+               Set lors = getMFDiscountPrice(lnCtr)
+               If Not lors.EOF Then
+                  If .Detail(lnCtr, "nDiscAmtx") <> lors("nCardAmtx") Or _
+                     .Detail(lnCtr, "nDiscRate") <> lors("nCardRate") Then
                      MsgBox "Invalid discount for CARD PAYMENT. Please refer to our official pricelist.", vbCritical, "Warning"
                      Exit Function
                   End If
@@ -3876,18 +3885,18 @@ Private Function saveCard() As Boolean
       .MoveFirst
       'Loop thru the record from beginning to end...
       Do Until .EOF
-         Set loRS = New Recordset
-         loRS.Open "SELECT *" & _
+         Set lors = New Recordset
+         lors.Open "SELECT *" & _
                      " FROM MP_Credit_Card_Transaction" & _
                      " WHERE sCrCardNo =  " & strParm(.Fields("sCrCardNo")) & _
                         " AND sApprovNo = " & strParm(UCase(Trim(.Fields("sCrCardNo")))) _
          , p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
          
-         If Not loRS.EOF Then
-            lsTransNox = loRS("sTransNox")
+         If Not lors.EOF Then
+            lsTransNox = lors("sTransNox")
             lsSQL = "UPDATE MP_Credit_Card_Transaction SET" & _
                         " nTranTotl = nTranTotl + " & CDbl(.Fields("nTranTotl")) & _
-                     " WHERE sTransNox = " & strParm(loRS("sTransNox"))
+                     " WHERE sTransNox = " & strParm(lors("sTransNox"))
          Else
             lsTransNox = GetNextCode("MP_Credit_Card_Transaction", "sTransNox", True, p_oAppDrivr.Connection, True, p_oAppDrivr.BranchCode)
             lsSQL = "INSERT INTO MP_Credit_Card_Transaction SET" & _
@@ -3966,11 +3975,11 @@ End Function
 
 Function isCardEntryOk() As Boolean
    Dim lnCtr As Integer
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
-   Set loRS = p_oCredtCard.Clone
+   Set lors = p_oCredtCard.Clone
  
-   With loRS
+   With lors
       .MoveFirst
       
       Do Until .EOF
@@ -4001,7 +4010,7 @@ End Function
 
 Private Function loadTerminal(ByVal lnRow As Integer, _
                            ByVal lsValue As String) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4027,12 +4036,12 @@ Private Function loadTerminal(ByVal lnRow As Integer, _
             
    lsSQL = AddCondition(lsSQL, "sBankIDxx = " & strParm(lsValue))
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sTermnlID") = loRS("sBankIDxx")
-      p_oCredtCard("sTerminal") = loRS("sBankName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sTermnlID") = lors("sBankIDxx")
+      p_oCredtCard("sTerminal") = lors("sBankName")
    Else
       GoTo endWithClear
    End If
@@ -4040,7 +4049,7 @@ Private Function loadTerminal(ByVal lnRow As Integer, _
    loadTerminal = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sTermnlID") = ""
@@ -4052,7 +4061,7 @@ End Function
 
 Private Function loadTerm(ByVal lnRow As Integer, _
                            ByVal lsValue As String) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4078,12 +4087,12 @@ Private Function loadTerm(ByVal lnRow As Integer, _
             
    lsSQL = AddCondition(lsSQL, "sTermName = " & strParm(lsValue))
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sTermIDxx") = loRS("sTermIDxx")
-      p_oCredtCard("sTermName") = loRS("sTermName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sTermIDxx") = lors("sTermIDxx")
+      p_oCredtCard("sTermName") = lors("sTermName")
    Else
       GoTo endWithClear
    End If
@@ -4091,7 +4100,7 @@ Private Function loadTerm(ByVal lnRow As Integer, _
    loadTerm = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sTermIDxx") = ""
@@ -4104,7 +4113,7 @@ End Function
 
 Private Function loadBank(ByVal lnRow As Integer, _
                           ByVal lsValue As String) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4130,12 +4139,12 @@ Private Function loadBank(ByVal lnRow As Integer, _
             
    lsSQL = AddCondition(lsSQL, "sBankIDxx = " & strParm(lsValue))
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sBankIDxx") = loRS("sBankIDxx")
-      p_oCredtCard("sBankName") = loRS("sBankName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sBankIDxx") = lors("sBankIDxx")
+      p_oCredtCard("sBankName") = lors("sBankName")
    Else
       GoTo endWithClear
    End If
@@ -4143,7 +4152,7 @@ Private Function loadBank(ByVal lnRow As Integer, _
    loadBank = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sBankIDxx") = ""
@@ -4155,7 +4164,7 @@ End Function
 
 Private Function loadCardType(ByVal lnRow As Integer, _
                               ByVal lsValue As String) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4181,12 +4190,12 @@ Private Function loadCardType(ByVal lnRow As Integer, _
             
    lsSQL = AddCondition(lsSQL, "sCardIDxx = " & strParm(lsValue))
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sCardIDxx") = loRS("sCardIDxx")
-      p_oCredtCard("sCardName") = loRS("sCardName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sCardIDxx") = lors("sCardIDxx")
+      p_oCredtCard("sCardName") = lors("sCardName")
    Else
       GoTo endWithClear
    End If
@@ -4194,7 +4203,7 @@ Private Function loadCardType(ByVal lnRow As Integer, _
    loadCardType = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sCardIDxx") = ""
@@ -4208,7 +4217,7 @@ Function getTerminal( _
       ByVal lnRow As Integer, _
       ByVal lsValue As String, _
       ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4224,6 +4233,7 @@ Function getTerminal( _
                & ", sBankName" _
             & " FROM Banks" _
             & " WHERE cRecdStat = " & strParm(xeRecStateActive) _
+            & " AND cTerminal = " & strParm(xeRecStateActive) _
             & " ORDER BY sBankName"
    
    p_oCredtCard.Move lnRow, adBookmarkFirst
@@ -4241,14 +4251,14 @@ Function getTerminal( _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sTermnlID") = loRS("sBankIDxx")
-      p_oCredtCard("sTerminal") = loRS("sBankName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sTermnlID") = lors("sBankIDxx")
+      p_oCredtCard("sTerminal") = lors("sBankName")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sBankIDxx»sBankName", _
                            "Code»Bank Name", _
                            "@»@", _
@@ -4263,7 +4273,7 @@ Function getTerminal( _
    getTerminal = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sTermnlID") = ""
@@ -4276,7 +4286,7 @@ End Function
 Function getOtherTerm( _
       ByVal lsValue As String, _
       ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4308,14 +4318,14 @@ Function getOtherTerm( _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oOthers("sTermCode") = loRS("sTermIDxx")
-      p_oOthers("sTermName") = loRS("sTermName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oOthers("sTermCode") = lors("sTermIDxx")
+      p_oOthers("sTermName") = lors("sTermName")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sTermIDxx»sTermName", _
                            "Code»Term Name", _
                            "@»@", _
@@ -4330,7 +4340,7 @@ Function getOtherTerm( _
    getOtherTerm = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oOthers("sTermCode") = ""
@@ -4344,7 +4354,7 @@ Function getBank( _
       ByVal lnRow As Integer, _
       ByVal lsValue As String, _
       ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4377,14 +4387,14 @@ Function getBank( _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sBankIDxx") = loRS("sBankIDxx")
-      p_oCredtCard("sBankName") = loRS("sBankName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sBankIDxx") = lors("sBankIDxx")
+      p_oCredtCard("sBankName") = lors("sBankName")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sBankIDxx»sBankName", _
                            "Code»Bank Name", _
                            "@»@", _
@@ -4399,7 +4409,7 @@ Function getBank( _
    getBank = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sBankIDxx") = ""
@@ -4413,7 +4423,7 @@ Function getCardType( _
       ByVal lnRow As Integer, _
       ByVal lsValue As String, _
       ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4446,14 +4456,14 @@ Function getCardType( _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oCredtCard("sCrCardID") = loRS("sCardIDxx")
-      p_oCredtCard("sCardName") = loRS("sCardName")
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oCredtCard("sCrCardID") = lors("sCardIDxx")
+      p_oCredtCard("sCardName") = lors("sCardName")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sCardIDxx»sCardName", _
                            "Code»Card Type", _
                            "@»@", _
@@ -4468,7 +4478,7 @@ Function getCardType( _
    getCardType = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oCredtCard("sCardIDxx") = ""
@@ -4481,7 +4491,7 @@ End Function
 Function getFinancer( _
       ByVal lsValue As String, _
       ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4517,16 +4527,16 @@ Function getFinancer( _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
 
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oFinancer("sClientID") = loRS("sClientID")
-      p_oFinancer("sCompnyNm") = loRS("sCompnyNm")
-      p_oFinancer("cInHousex") = loRS("cInHousex")
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oFinancer("sClientID") = lors("sClientID")
+      p_oFinancer("sCompnyNm") = lors("sCompnyNm")
+      p_oFinancer("cInHousex") = lors("cInHousex")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sClientID»sCompnyNm", _
                            "Code»Financer", _
                            "@»@", _
@@ -4605,7 +4615,7 @@ Function getFinancer( _
    getFinancer = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oFinancer("sClientID") = ""
@@ -4623,7 +4633,7 @@ End Function
 
 Private Function isPromoActive(ByVal fsFincrIDx, ByVal fsModelIDx) As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    
    lsSQL = "SELECT a.sMPCatIDx" & _
             " FROM CP_Model_Price a" & _
@@ -4632,15 +4642,15 @@ Private Function isPromoActive(ByVal fsFincrIDx, ByVal fsModelIDx) As Boolean
                " AND " & dateParm(p_oBaseClas.Master("dTransact")) & " BETWEEN b.dDateFrom AND b.dDateThru" & _
                " AND a.sModelIDx = " & strParm(fsModelIDx)
       
-   Set loRS = New Recordset
+   Set lors = New Recordset
    
    Debug.Print lsSQL
-   loRS.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
-   Set loRS.ActiveConnection = Nothing
+   lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+   Set lors.ActiveConnection = Nothing
    
-   isPromoActive = Not loRS.EOF
+   isPromoActive = Not lors.EOF
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
 
    Exit Function
 End Function
@@ -4648,7 +4658,7 @@ End Function
 Function getOthers( _
       ByVal lsValue As String, _
       ByVal lbSearch As Boolean) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lsDetail As String
@@ -4684,15 +4694,15 @@ Function getOthers( _
             
    lsSQL = AddCondition(lsSQL, lsDetail)
    
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
 
-   If loRS.EOF Then GoTo endProc
-   If loRS.RecordCount = 1 Then
-      p_oOthers("sClientID") = loRS("sClientID")
-      p_oOthers("sCompnyNm") = loRS("sCompnyNm")
+   If lors.EOF Then GoTo endProc
+   If lors.RecordCount = 1 Then
+      p_oOthers("sClientID") = lors("sClientID")
+      p_oOthers("sCompnyNm") = lors("sCompnyNm")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS, _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors, _
                            "sClientID»sCompnyNm", _
                            "Code»Financer", _
                            "@»@", _
@@ -4713,7 +4723,7 @@ Function getOthers( _
    getOthers = True
                
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 endWithClear:
    p_oOthers("sClientID") = ""
@@ -4728,23 +4738,23 @@ End Function
 
 Private Function saveARClient() As Boolean
    Dim loClient As clsARClient
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    
    lsProcName = "saveARClient"
    Debug.Print pxeMODULENAME & "." & lsProcName
    'On Error GoTo errProc
    
-   Set loRS = New Recordset
+   Set lors = New Recordset
    
-   loRS.Open "SELECT a.*, b.sClientID xClientID" & _
+   lors.Open "SELECT a.*, b.sClientID xClientID" & _
                " FROM CP_Financer a" & _
                   " LEFT JOIN AR_Client_Master b" & _
                      " ON a.sClientID = b.sClientID" & _
                " WHERE a.sClientID = " & strParm(p_oFinancer("sClientID")) _
    , p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
    
-   If Not IsNull(loRS("xClientID")) Then
+   If Not IsNull(lors("xClientID")) Then
       saveARClient = True
       GoTo endProc
    End If
@@ -4756,17 +4766,17 @@ Private Function saveARClient() As Boolean
       .InitRecord
       .NewRecord
             
-      .Master("sClientID") = loRS("sClientID")
-      .Master("sTelNoxxx") = loRS("sTelNoxxx")
-      .Master("sFaxNoxxx") = loRS("sFaxNoxxx")
-      .Master("sCPerson1") = loRS("sCPerson1")
-      .Master("sCPPosit1") = loRS("sCPPosit1")
-      .Master("sTermIDxx") = loRS("sTermIDxx")
-      .Master("sRemarksx") = loRS("sRemarksx")
-      .Master("nCredLimt") = loRS("nCredLimt")
-      .Master("nABalance") = IFNull(loRS("nABalance"), 0#)
-      .Master("dCltSince") = IFNull(loRS("dCltSince"), p_oAppDrivr.ServerDate)
-      .Master("nLedgerNo") = loRS("nLedgerNo")
+      .Master("sClientID") = lors("sClientID")
+      .Master("sTelNoxxx") = lors("sTelNoxxx")
+      .Master("sFaxNoxxx") = lors("sFaxNoxxx")
+      .Master("sCPerson1") = lors("sCPerson1")
+      .Master("sCPPosit1") = lors("sCPPosit1")
+      .Master("sTermIDxx") = lors("sTermIDxx")
+      .Master("sRemarksx") = lors("sRemarksx")
+      .Master("nCredLimt") = lors("nCredLimt")
+      .Master("nABalance") = IFNull(lors("nABalance"), 0#)
+      .Master("dCltSince") = IFNull(lors("dCltSince"), p_oAppDrivr.ServerDate)
+      .Master("nLedgerNo") = lors("nLedgerNo")
       .Master("cHoldAcct") = xeNo
       .Master("cAutoHold") = xeNo
       .Master("cRecdStat") = xeYes
@@ -4926,7 +4936,7 @@ End Function
 
 Private Function IsPromoRoute() As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    
    lsProcName = "IsPromoRoute"
@@ -4938,9 +4948,9 @@ Private Function IsPromoRoute() As Boolean
           " FROM TownCity" & _
           " WHERE (sTownName like '%GGC%' OR sTownName like '%Guanzon%')" & _
           "   AND sTownIDxx = " & strParm(p_oClient.Master("sTownIDxx"))
-   Set loRS = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+   Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
    
-   If Not loRS.EOF Then IsPromoRoute = True
+   If Not lors.EOF Then IsPromoRoute = True
    
    'kalyptus - 2011.09.03
    ' Include testing if employee
@@ -4951,9 +4961,9 @@ Private Function IsPromoRoute() As Boolean
       lsSQL = "SELECT sEmployID" & _
                    " FROM Employee_Master001" & _
                    " WHERE sEmployID = " & strParm(p_oClient.Master("sClientID"))
-      Set loRS = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+      Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
             
-      If Not loRS.EOF Then IsPromoRoute = True
+      If Not lors.EOF Then IsPromoRoute = True
    End If
    
 endProc:
@@ -4965,7 +4975,7 @@ End Function
 
 Private Function IsEmployee() As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    
    lsProcName = "IsEmployee"
@@ -4976,9 +4986,9 @@ Private Function IsEmployee() As Boolean
             " FROM Employee_Master001" & _
             " WHERE sEmployID = " & strParm(p_oClient.Master("sClientID"))
             
-   Set loRS = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+   Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
          
-   If Not loRS.EOF Then IsEmployee = True
+   If Not lors.EOF Then IsEmployee = True
 endProc:
    Exit Function
 errProc:
@@ -4988,7 +4998,7 @@ End Function
 
 Private Function IsAutoQM() As Boolean
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsProcName As String
    
    lsProcName = "IsAutoQM"
@@ -5000,9 +5010,9 @@ Private Function IsAutoQM() As Boolean
           " FROM MC_LR_QuickMatch" & _
           " WHERE sTransNox LIKE " & strParm(p_sBranchCd & "%") & _
           " LIMIT 1"
-   Set loRS = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+   Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
    
-   If loRS.EOF Then IsAutoQM = False
+   If lors.EOF Then IsAutoQM = False
    
 endProc:
    Exit Function
@@ -5022,7 +5032,7 @@ Private Function getAccount(ByVal lbReplacement As Boolean) As Boolean
    Dim lsSerialID As String
    Dim lnCtr As Integer
    Dim loPricelist As clsCPPriceList
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lnTerm As Integer
    Dim lsAcctNmbr As String
    
@@ -5423,7 +5433,7 @@ End Function
 Private Function getMFDiscountPrice(ByVal lnRow As Integer) As Recordset
    Dim lsMFPeriod As String
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
       
    With p_oBaseClas
       lsSQL = "SELECT sFiestaCD" & _
@@ -5431,13 +5441,13 @@ Private Function getMFDiscountPrice(ByVal lnRow As Integer) As Recordset
              " WHERE " & dateParm(.Master("dTransact")) & " BETWEEN dDateFrom AND dDateThru" & _
                " AND cRecdStat = '1'"
       Debug.Print lsSQL
-      Set loRS = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
+      Set lors = p_oAppDrivr.Connection.Execute(lsSQL, , adCmdText)
       
-      If loRS.EOF Then
-         Set getMFDiscountPrice = loRS
+      If lors.EOF Then
+         Set getMFDiscountPrice = lors
          Exit Function
       Else
-         lsMFPeriod = loRS("sFiestaCD")
+         lsMFPeriod = lors("sFiestaCD")
       End If
             
       'Set sFiestaCD as indicator if a serial or model is included in the mobile fiesta promo
