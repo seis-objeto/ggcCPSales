@@ -757,6 +757,8 @@ Function CloseTransaction(ByVal sTransNo As String)
    Dim lnAppvRights As Integer
    Dim lsAppvID As String
    Dim lsAppvName As String
+   Dim lbApproved As Boolean
+   Dim lsApprovedCD As String
    
    lsProcName = "CloseTransaction"
    Debug.Print pxeMODULENAME & "." & lsProcName
@@ -764,6 +766,150 @@ Function CloseTransaction(ByVal sTransNo As String)
    
    'kalyptus - 2024.07.05
    'Add authorization of transfer
+   
+'   If pbInitTran Then
+'      lbApproved = False
+'
+'      If Not p_oAppDrivr.IsWarehouse Then 'Branch
+'         If MsgBox("Transfer of inventory needs authorization from Manager/Officer." & _
+'                            vbCrLf & "Seek Authorized User's Approval?", _
+'                            vbYesNo, "Warning") = vbNo Then
+'            MsgBox "Seeking of authorization cancelled!!!" & vbCrLf & _
+'            "Request can not be granted!!!", vbCritical, "Warning"
+'            GoTo endProc
+'         End If
+'
+'         If Not GetCodeApproval(p_oAppDrivr, lsApprovedCD, lsApproveID, lsApproveName) Then
+'            MsgBox "User is not authorized to Approve!" & vbCrLf & _
+'               "Verify your entry then try again!", vbOKOnly + vbCritical, "Warning"
+'            GoTo endProc
+'         End If
+'
+'                  'area head
+'         If isDestinationWarehouse Then
+'            lsSQL = p_oSCA_Const.pxeBranch2WarehouseTransfer
+'
+'            If isValidApproveCode( _
+'               lsSQL, _
+'               p_oAppDrivr.BranchCode, _
+'               0, _
+'               Master("dTransact"), _
+'               Right(Master("sTransNox"), 6), _
+'               lsApprovedCD) Then
+'
+'               lbApproved = True
+'            End If
+'         Else
+'            lsSQL = p_oSCA_Const.pxeBranch2BranchTransfer
+'
+'            If isValidApproveCode( _
+'               lsSQL, _
+'               p_oAppDrivr.BranchCode, _
+'               0, _
+'               Master("dTransact"), _
+'               Right(Master("sTransNox"), 6), _
+'               lsApprovedCD) Then
+'
+'               lbApproved = True
+'            End If
+'         End If
+'
+'               If Not lbApproved Then
+'               MsgBox "Invalid APPROVAL CODE detected." & vbCrLf & _
+'               "Verify entry then try again!", vbCritical, "Warning"
+'               GoTo endProc
+'            End If
+'
+'            p_oAppDrivr.BeginTrans
+'
+'            lsSQL = "INSERT INTO xxxSCA_Usage" & _
+'                " SET sTransNox = " & strParm(GetNextCode("xxxSCA_Usage", "sTransNox", True, p_oAppDrivr.Connection, True, p_oAppDrivr.BranchCode)) & _
+'                   ", sApprCode = " & strParm(lsApprovedCD) & _
+'                   ", sApproved = " & strParm(lsApproveID) & _
+'                   ", sSystemCD = " & strParm(lsSQL) & _
+'                   ", sSourceNo = " & strParm(Master("sTransNox")) & _
+'                   ", sSourceCD = " & strParm(pxeSPDelivery) & _
+'                   ", sModified = " & strParm(p_oAppDrivr.UserID) & _
+'                   ", dModified = " & dateParm(p_oAppDrivr.ServerDate)
+'
+'            If p_oAppDrivr.Execute(lsSQL, "xxxSCA_Usage", p_oAppDrivr.BranchCode) <= 0 Then
+'               MsgBox "Unable to save APPROVAL CODE.", vbCritical, "Warning"
+'               p_oAppDrivr.RollbackTrans
+'               GoTo endProc
+'            End If
+'
+'
+'      Else
+'         If Trim(Master("sOrderNox")) = "" And p_oAppDrivr.BranchCode <> "GCC2" Then 'exclude sp transfer approval for madam myrna And p_oAppDrivr.BranchCode <> "M0w1"
+'            If MsgBox("Transfer of inventory needs authorization from Manager/Officer." & _
+'                            vbCrLf & "Seek Authorized User's Approval?", _
+'                            vbYesNo, "Warning") = vbNo Then
+'               MsgBox "Seeking of authorization cancelled!!!" & vbCrLf & _
+'                  "Request can not be granted!!!", vbCritical, "Warning"
+'               GoTo endProc
+'            End If
+'
+'            If Not GetCodeApproval(p_oAppDrivr, lsApprovedCD, lsApproveID, lsApproveName) Then
+'               MsgBox "User is not authorized to Approve!" & vbCrLf & _
+'                  "Verify your entry then try again!", vbOKOnly + vbCritical, "Warning"
+'               GoTo endProc
+'            End If
+'
+'            If isDestinationWarehouse Then
+'               lsSQL = p_oSCA_Const.pxeWarehouse2WarehouseTransfer
+'            Else
+'               lsSQL = p_oSCA_Const.pxeWarehouse2BranchTransfer
+'            End If
+'
+'            If isValidApproveCode( _
+'               lsSQL, _
+'               p_oAppDrivr.BranchCode, _
+'               4, _
+'               Master("dTransact"), _
+'               Right(Master("sTransNox"), 6), _
+'               lsApprovedCD) Then
+'
+'               'sir marc ong(marketing)
+'               lbApproved = True
+'            ElseIf isValidApproveCode( _
+'               lsSQL, _
+'               p_oAppDrivr.BranchCode, _
+'               5, _
+'               Master("dTransact"), _
+'               Right(Master("sTransNox"), 6), _
+'               lsApprovedCD) Then
+'               'manilyn(spareparts)
+'               lbApproved = True
+'            End If
+'
+'            If Not lbApproved Then
+'               MsgBox "Invalid APPROVAL CODE detected." & vbCrLf & _
+'               "Verify entry then try again!", vbCritical, "Warning"
+'               GoTo endProc
+'            End If
+'
+'            p_oAppDrivr.BeginTrans
+'
+'            lsSQL = "INSERT INTO xxxSCA_Usage" & _
+'                " SET sTransNox = " & strParm(GetNextCode("xxxSCA_Usage", "sTransNox", True, p_oAppDrivr.Connection, True, p_oAppDrivr.BranchCode)) & _
+'                   ", sApprCode = " & strParm(lsApprovedCD) & _
+'                   ", sApproved = " & strParm(lsApproveID) & _
+'                   ", sSystemCD = " & strParm(lsSQL) & _
+'                   ", sSourceNo = " & strParm(Master("sTransNox")) & _
+'                   ", sSourceCD = " & strParm(pxeSPDelivery) & _
+'                   ", sModified = " & strParm(p_oAppDrivr.UserID) & _
+'                   ", dModified = " & dateParm(p_oAppDrivr.ServerDate)
+'
+'            If p_oAppDrivr.Execute(lsSQL, "xxxSCA_Usage", p_oAppDrivr.BranchCode) <= 0 Then
+'               MsgBox "Unable to save APPROVAL CODE.", vbCritical, "Warning"
+'               p_oAppDrivr.RollbackTrans
+'               GoTo endProc
+'            End If
+'
+'         End If
+'      End If
+   
+   
    If pbInitTran Then
         lbGetApproval = MsgBox("Transfer of inventory needs authorization from Manager/Officer." & _
                           vbCrLf & "Seek Authorized User's Approval?", _
@@ -773,7 +919,7 @@ Function CloseTransaction(ByVal sTransNo As String)
               "Request can not be granted!!!", vbCritical, "Warning"
            GoTo endProc
         End If
-           
+
         If GetApproval(p_oAppDrivr, _
               lnAppvRights, _
               lsAppvID, _
@@ -1857,3 +2003,19 @@ Private Sub ShowError(ByVal lsProcName As String)
         .Raise .Number, .Source, .Description
     End With
 End Sub
+
+Private Function isDestinationWarehouse() As Boolean
+   Dim lsSQL As String
+   Dim lors As Recordset
+   
+   lsSQL = "SELECT cWareHous FROM Branch WHERE sBranchCd = " & strParm(Master("sDestinat"))
+   
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+   Set lors.ActiveConnection = Nothing
+   
+   isDestinationWarehouse = Not lors.EOF And lors("cWareHous") = xeYes
+   
+   Set lors = Nothing
+End Function
+

@@ -889,10 +889,10 @@ Private Sub Form_Activate()
          '0 = SRP, 6 = srp, 7 = card amount, 9 =srp, 4 = total card amount
          txtField(0) = Format(IFNull(.Receipt("nCardAmtx"), 0#), "#,##0.00")
          txtField(6) = txtField(0)
-         txtField(7) = Format(p_oCPSales.Master("nTranTotl") - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx")), "#,##0.00")
+         txtField(7) = Format(p_oCPSales.Master("nTranTotl") - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + p_oCPSales.TITU.TranTotl()), "#,##0.00")
 '         txtField(7) = Format(p_oCPSales.Detail(0, "nUnitPrce") - (p_oCPSales.Master("nCashAmtx") - lnCshPaymAcc), "#,##0.00")
          txtField(9) = txtField(0)
-         txtOthers(4) = Format(p_oCPSales.Master("nTranTotl") - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx")), "#,##0.00")
+         txtOthers(4) = Format(p_oCPSales.Master("nTranTotl") - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + p_oCPSales.TITU.TranTotl()), "#,##0.00")
 '         txtOthers(4) = Format(p_oCPSales.Detail(0, "nUnitPrce") - (p_oCPSales.Master("nCashAmtx") - lnCshPaymAcc), "#,##0.00")
          txtField(1).SetFocus
 
@@ -934,7 +934,7 @@ Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
       If isCredtCardOk = True Then
          Call txtField_Validate(6, True)
          Call ComputeCredtCardTotal
-         If lnCredtCrdTtl + (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx")) < lnUnitPrce + lnCharge Then  '- lnCshPaymAcc
+         If lnCredtCrdTtl + (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + p_oCPSales.TITU.TranTotl()) < lnUnitPrce + lnCharge Then  '- lnCshPaymAcc
             MsgBox "Computed Amount for Credit Card Payment is less than the amount Entered" & _
                " Pls check the amount entered then try again!!!"
             txtField(6).SetFocus
@@ -944,7 +944,7 @@ Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
                Me.Hide
             End If
          End If
-         p_oCPSales.Master("nTranTotl") = lnCredtCrdTtl + p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx")
+         p_oCPSales.Master("nTranTotl") = lnCredtCrdTtl + p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + p_oCPSales.TITU.TranTotl()
       End If
    Case vbKeyF8 'Delete Item
       lnRow = GridEditor1.Row
@@ -1140,7 +1140,7 @@ Private Sub txtField_Validate(Index As Integer, Cancel As Boolean)
          .TextMatrix(.Row, 2) = Format(txtField(6), "#,##0.00")
          p_oCPSales.Card(pnRow - 1, "nAmountxx") = CDbl(txtField(6))
          p_oCPSales.Card(pnRow - 1, "nBaseAmtx") = CDbl(txtField(9))
-         p_oCPSales.Card(pnRow - 1, "nTranTotl") = CDbl(txtField(7))
+            p_oCPSales.Card(pnRow - 1, "nTranTotl") = CDbl(txtField(7))
          p_oCPSales.Receipt("nCardAmtx") = CDbl(txtField(7))
    
          Call ComputeCredtCardTotal
@@ -1179,7 +1179,7 @@ Private Sub validateCreditCard_old()
    lnCharge = 0#
    
    For lnCtr = 0 To p_oCPSales.ItemCount - 1
-      lnUnitPrce = lnUnitPrce + (p_oCPSales.Detail(lnCtr, "nUnitPrce") - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx")))
+      lnUnitPrce = lnUnitPrce + (p_oCPSales.Detail(lnCtr, "nUnitPrce") - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + p_oCPSales.TITU.TranTotl()))
       If p_oCPSales.Detail(lnCtr, "sCategID1") = "C001001" Then
 '         lnUnitPrce = p_oCPSales.Detail(lnCtr, "nUnitPrce" - p_oCPSales.Master("nCashAmtx"))
          lsModel = p_oCPSales.Detail(lnCtr, "sModelIDx")
@@ -1395,7 +1395,7 @@ Private Sub validateCreditCard_old()
    txtField(0) = Format(lnUnitPrce, "#,##0.00")
 '   txtField(6) = Format((lnUnitPrce + lnCharge) - (p_oCPSales.Master("nCashAmtx") + lnCshPaymAcc), "#,##0.00")
 '   txtField(7) = Format(CDbl(txtField(6)), "#,##0.00")
-   txtField(7) = Format((lnUnitPrce + lnCharge) - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + lnCshPaymAcc), "#,##0.00")
+   txtField(7) = Format((lnUnitPrce + lnCharge) - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + lnCshPaymAcc + p_oCPSales.TITU.TranTotl()), "#,##0.00")
    txtField(9) = Format(lnUnitPrce, "#,##0.00")
    
    p_oCPSales.CardRate = pnTerm
@@ -1655,7 +1655,7 @@ Private Sub validateCreditCard()
    End If
    
    txtField(0) = Format(lnUnitPrce, "#,##0.00")
-   txtField(7) = Format((lnUnitPrce + lnCharge) - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx")), "#,##0.00")
+   txtField(7) = Format((lnUnitPrce + lnCharge) - (p_oCPSales.Master("nCashAmtx") + p_oCPSales.Others("nAmtPaidx") + p_oCPSales.TITU.TranTotl), "#,##0.00")
    Debug.Print txtField(7)
    txtField(9) = Format(lnUnitPrce, "#,##0.00")
    

@@ -10,6 +10,7 @@ Begin VB.Form frmReceipt
    ClientWidth     =   12360
    KeyPreview      =   -1  'True
    LinkTopic       =   "Form1"
+   LockControls    =   -1  'True
    ScaleHeight     =   10080
    ScaleWidth      =   12360
    ShowInTaskbar   =   0   'False
@@ -18,19 +19,39 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   18
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   555
+      Height          =   495
+      Index           =   17
+      Left            =   8595
+      TabIndex        =   61
+      Text            =   "0.00"
+      Top             =   1590
+      Width           =   3595
+   End
+   Begin VB.TextBox txtField 
+      Alignment       =   1  'Right Justify
+      Enabled         =   0   'False
+      BeginProperty Font 
+         Name            =   "MS Sans Serif"
+         Size            =   15
+         Charset         =   0
+         Weight          =   700
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
+      Height          =   495
       Index           =   21
       Left            =   8595
-      TabIndex        =   51
+      TabIndex        =   49
       Text            =   "0.00"
-      Top             =   2715
+      Top             =   2610
       Width           =   3595
    End
    Begin VB.TextBox txtField 
@@ -38,39 +59,19 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   12
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   420
+      Height          =   495
       Index           =   20
-      Left            =   8595
-      TabIndex        =   15
-      Text            =   "0.00"
-      Top             =   3270
-      Width           =   3595
-   End
-   Begin VB.TextBox txtField 
-      Alignment       =   1  'Right Justify
-      Enabled         =   0   'False
-      BeginProperty Font 
-         Name            =   "MS Sans Serif"
-         Size            =   18
-         Charset         =   0
-         Weight          =   700
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      Height          =   555
-      Index           =   19
       Left            =   8595
       TabIndex        =   13
       Text            =   "0.00"
-      Top             =   2160
+      Top             =   3120
       Width           =   3595
    End
    Begin VB.TextBox txtField 
@@ -78,19 +79,19 @@ Begin VB.Form frmReceipt
       Enabled         =   0   'False
       BeginProperty Font 
          Name            =   "MS Sans Serif"
-         Size            =   18
+         Size            =   15
          Charset         =   0
          Weight          =   700
          Underline       =   0   'False
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   555
-      Index           =   17
+      Height          =   495
+      Index           =   19
       Left            =   8595
       TabIndex        =   11
       Text            =   "0.00"
-      Top             =   1620
+      Top             =   2100
       Width           =   3595
    End
    Begin VB.TextBox txtField 
@@ -156,9 +157,9 @@ Begin VB.Form frmReceipt
       Left            =   285
       ScaleHeight     =   2265
       ScaleWidth      =   11865
-      TabIndex        =   48
+      TabIndex        =   46
       Tag             =   "wt0;fb0"
-      Top             =   3850
+      Top             =   3660
       Width           =   11920
       Begin VB.TextBox txtField 
          BeginProperty Font 
@@ -173,7 +174,7 @@ Begin VB.Form frmReceipt
          Height          =   420
          Index           =   18
          Left            =   6855
-         TabIndex        =   23
+         TabIndex        =   21
          Text            =   "Text1"
          Top             =   1740
          Width           =   4855
@@ -191,7 +192,7 @@ Begin VB.Form frmReceipt
          Height          =   420
          Index           =   1
          Left            =   1875
-         TabIndex        =   19
+         TabIndex        =   17
          Text            =   "Text1"
          Top             =   795
          Width           =   9835
@@ -209,7 +210,7 @@ Begin VB.Form frmReceipt
          Height          =   420
          Index           =   2
          Left            =   1875
-         TabIndex        =   21
+         TabIndex        =   19
          Text            =   "Text1"
          Top             =   1260
          Width           =   9835
@@ -228,7 +229,7 @@ Begin VB.Form frmReceipt
          Height          =   660
          Index           =   3
          Left            =   6855
-         TabIndex        =   17
+         TabIndex        =   15
          Text            =   "0.00"
          Top             =   90
          Width           =   4855
@@ -250,7 +251,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   18
          Left            =   5685
-         TabIndex        =   22
+         TabIndex        =   20
          Top             =   1845
          Width           =   1125
       End
@@ -271,7 +272,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   1
          Left            =   105
-         TabIndex        =   18
+         TabIndex        =   16
          Top             =   840
          Width           =   1770
       End
@@ -292,7 +293,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   2
          Left            =   105
-         TabIndex        =   20
+         TabIndex        =   18
          Top             =   1350
          Width           =   1785
       End
@@ -314,7 +315,7 @@ Begin VB.Form frmReceipt
          Height          =   555
          Index           =   3
          Left            =   4335
-         TabIndex        =   16
+         TabIndex        =   14
          Top             =   210
          Width           =   2460
       End
@@ -326,15 +327,15 @@ Begin VB.Form frmReceipt
       Left            =   285
       ScaleHeight     =   2175
       ScaleWidth      =   11865
-      TabIndex        =   49
+      TabIndex        =   47
       Tag             =   "wt0;fb0"
-      Top             =   6190
+      Top             =   6000
       Width           =   11920
       Begin VB.TextBox txtField 
          Height          =   360
          Index           =   7
          Left            =   1275
-         TabIndex        =   32
+         TabIndex        =   30
          Text            =   "0000000000"
          Top             =   1590
          Width           =   1515
@@ -343,7 +344,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   9
          Left            =   6030
-         TabIndex        =   37
+         TabIndex        =   35
          Text            =   "Text1"
          Top             =   375
          Width           =   3330
@@ -352,7 +353,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   10
          Left            =   6030
-         TabIndex        =   39
+         TabIndex        =   37
          Top             =   780
          Width           =   1695
       End
@@ -360,7 +361,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   11
          Left            =   6030
-         TabIndex        =   41
+         TabIndex        =   39
          Text            =   "0000-0000-0000-0000"
          Top             =   1185
          Width           =   1695
@@ -379,7 +380,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   13
          Left            =   7995
-         TabIndex        =   45
+         TabIndex        =   43
          Text            =   "000,000.00"
          Top             =   1590
          Width           =   1365
@@ -388,7 +389,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   12
          Left            =   6030
-         TabIndex        =   43
+         TabIndex        =   41
          Text            =   "0000-0000-0000-0000"
          Top             =   1590
          Width           =   1695
@@ -397,7 +398,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   6
          Left            =   1275
-         TabIndex        =   30
+         TabIndex        =   28
          Text            =   "0000000000"
          Top             =   1185
          Width           =   1515
@@ -406,7 +407,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   5
          Left            =   1275
-         TabIndex        =   28
+         TabIndex        =   26
          Text            =   "December 31, 2008"
          Top             =   780
          Width           =   1515
@@ -415,7 +416,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   4
          Left            =   1275
-         TabIndex        =   26
+         TabIndex        =   24
          Text            =   "Text1"
          Top             =   375
          Width           =   3330
@@ -434,7 +435,7 @@ Begin VB.Form frmReceipt
          Height          =   360
          Index           =   8
          Left            =   3090
-         TabIndex        =   34
+         TabIndex        =   32
          Text            =   "000,000.00"
          Top             =   1590
          Width           =   1515
@@ -456,7 +457,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   25
          Left            =   150
-         TabIndex        =   31
+         TabIndex        =   29
          Top             =   1665
          Width           =   900
       End
@@ -477,7 +478,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   12
          Left            =   4905
-         TabIndex        =   38
+         TabIndex        =   36
          Top             =   840
          Width           =   1065
       End
@@ -498,7 +499,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   13
          Left            =   4905
-         TabIndex        =   40
+         TabIndex        =   38
          Top             =   1245
          Width           =   900
       End
@@ -519,7 +520,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   11
          Left            =   4920
-         TabIndex        =   36
+         TabIndex        =   34
          Top             =   420
          Width           =   1065
       End
@@ -549,7 +550,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   10
          Left            =   4800
-         TabIndex        =   35
+         TabIndex        =   33
          Top             =   45
          Width           =   1170
       End
@@ -570,7 +571,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   15
          Left            =   7950
-         TabIndex        =   44
+         TabIndex        =   42
          Top             =   1365
          Width           =   1515
       End
@@ -618,7 +619,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   14
          Left            =   4905
-         TabIndex        =   42
+         TabIndex        =   40
          Top             =   1665
          Width           =   1185
       End
@@ -639,7 +640,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   5
          Left            =   90
-         TabIndex        =   24
+         TabIndex        =   22
          Top             =   45
          Width           =   1170
       End
@@ -669,7 +670,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   6
          Left            =   180
-         TabIndex        =   25
+         TabIndex        =   23
          Top             =   420
          Width           =   1065
       End
@@ -690,7 +691,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   8
          Left            =   150
-         TabIndex        =   29
+         TabIndex        =   27
          Top             =   1245
          Width           =   900
       End
@@ -711,7 +712,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   7
          Left            =   150
-         TabIndex        =   27
+         TabIndex        =   25
          Top             =   840
          Width           =   1065
       End
@@ -732,7 +733,7 @@ Begin VB.Form frmReceipt
          Height          =   315
          Index           =   9
          Left            =   3090
-         TabIndex        =   33
+         TabIndex        =   31
          Top             =   1380
          Width           =   1065
       End
@@ -786,7 +787,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   0
       Left            =   555
-      TabIndex        =   52
+      TabIndex        =   50
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -807,7 +808,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   1
       Left            =   1620
-      TabIndex        =   53
+      TabIndex        =   51
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -828,7 +829,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   2
       Left            =   2670
-      TabIndex        =   54
+      TabIndex        =   52
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -849,7 +850,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   3
       Left            =   3735
-      TabIndex        =   55
+      TabIndex        =   53
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -870,7 +871,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   4
       Left            =   4785
-      TabIndex        =   56
+      TabIndex        =   54
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -891,7 +892,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   5
       Left            =   10110
-      TabIndex        =   57
+      TabIndex        =   55
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -912,7 +913,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   6
       Left            =   11190
-      TabIndex        =   58
+      TabIndex        =   56
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -933,7 +934,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   7
       Left            =   7980
-      TabIndex        =   59
+      TabIndex        =   57
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -954,7 +955,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   8
       Left            =   5850
-      TabIndex        =   60
+      TabIndex        =   58
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -975,7 +976,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   9
       Left            =   9045
-      TabIndex        =   61
+      TabIndex        =   59
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -996,7 +997,7 @@ Begin VB.Form frmReceipt
       Height          =   420
       Index           =   10
       Left            =   6915
-      TabIndex        =   62
+      TabIndex        =   60
       Top             =   9585
       Width           =   1035
       _ExtentX        =   1826
@@ -1015,72 +1016,7 @@ Begin VB.Form frmReceipt
    End
    Begin VB.Label lblField 
       Alignment       =   1  'Right Justify
-      BackColor       =   &H001778E7&
-      BackStyle       =   0  'Transparent
-      Caption         =   "OTHER PAYMENT"
-      BeginProperty Font 
-         Name            =   "Microsoft Sans Serif"
-         Size            =   9.75
-         Charset         =   0
-         Weight          =   700
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      ForeColor       =   &H8000000E&
-      Height          =   345
-      Index           =   21
-      Left            =   6315
-      TabIndex        =   50
-      Top             =   2805
-      Width           =   2250
-   End
-   Begin VB.Label lblField 
-      Alignment       =   1  'Right Justify
-      BackColor       =   &H001778E7&
-      BackStyle       =   0  'Transparent
-      Caption         =   "TRADE-IN AMOUNT"
-      BeginProperty Font 
-         Name            =   "Microsoft Sans Serif"
-         Size            =   9.75
-         Charset         =   0
-         Weight          =   700
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      ForeColor       =   &H8000000E&
-      Height          =   345
-      Index           =   20
-      Left            =   5985
-      TabIndex        =   14
-      Top             =   3270
-      Width           =   2580
-   End
-   Begin VB.Label lblField 
-      Alignment       =   1  'Right Justify
-      BackColor       =   &H001778E7&
-      BackStyle       =   0  'Transparent
-      Caption         =   "FINANCE AMOUNT"
-      BeginProperty Font 
-         Name            =   "Microsoft Sans Serif"
-         Size            =   9.75
-         Charset         =   0
-         Weight          =   700
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      ForeColor       =   &H8000000E&
-      Height          =   345
-      Index           =   19
-      Left            =   6315
-      TabIndex        =   12
-      Top             =   2205
-      Width           =   2250
-   End
-   Begin VB.Label lblField 
-      Alignment       =   1  'Right Justify
+      AutoSize        =   -1  'True
       BackColor       =   &H001778E7&
       BackStyle       =   0  'Transparent
       Caption         =   "RETURN PAYMENT"
@@ -1094,12 +1030,81 @@ Begin VB.Form frmReceipt
          Strikethrough   =   0   'False
       EndProperty
       ForeColor       =   &H8000000E&
-      Height          =   345
+      Height          =   240
       Index           =   0
-      Left            =   6315
+      Left            =   6435
+      TabIndex        =   62
+      Top             =   1717
+      Width           =   2115
+   End
+   Begin VB.Label lblField 
+      Alignment       =   1  'Right Justify
+      AutoSize        =   -1  'True
+      BackColor       =   &H001778E7&
+      BackStyle       =   0  'Transparent
+      Caption         =   "OTHER PAYMENT"
+      BeginProperty Font 
+         Name            =   "Microsoft Sans Serif"
+         Size            =   9.75
+         Charset         =   0
+         Weight          =   700
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
+      ForeColor       =   &H8000000E&
+      Height          =   240
+      Index           =   21
+      Left            =   6615
+      TabIndex        =   48
+      Top             =   2737
+      Width           =   1950
+   End
+   Begin VB.Label lblField 
+      Alignment       =   1  'Right Justify
+      AutoSize        =   -1  'True
+      BackColor       =   &H001778E7&
+      BackStyle       =   0  'Transparent
+      Caption         =   "TRADE-IN AMOUNT"
+      BeginProperty Font 
+         Name            =   "Microsoft Sans Serif"
+         Size            =   9.75
+         Charset         =   0
+         Weight          =   700
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
+      ForeColor       =   &H8000000E&
+      Height          =   240
+      Index           =   20
+      Left            =   6450
+      TabIndex        =   12
+      Top             =   3247
+      Width           =   2115
+   End
+   Begin VB.Label lblField 
+      Alignment       =   1  'Right Justify
+      AutoSize        =   -1  'True
+      BackColor       =   &H001778E7&
+      BackStyle       =   0  'Transparent
+      Caption         =   "FINANCE AMOUNT"
+      BeginProperty Font 
+         Name            =   "Microsoft Sans Serif"
+         Size            =   9.75
+         Charset         =   0
+         Weight          =   700
+         Underline       =   0   'False
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
+      ForeColor       =   &H8000000E&
+      Height          =   240
+      Index           =   19
+      Left            =   6555
       TabIndex        =   10
-      Top             =   1665
-      Width           =   2250
+      Top             =   2227
+      Width           =   2010
    End
    Begin VB.Label lblField 
       BackColor       =   &H001778E7&
@@ -1196,6 +1201,7 @@ Begin VB.Form frmReceipt
    End
    Begin VB.Label lblField 
       Alignment       =   1  'Right Justify
+      AutoSize        =   -1  'True
       BackColor       =   &H001778E7&
       BackStyle       =   0  'Transparent
       Caption         =   "Change Amount:"
@@ -1209,12 +1215,12 @@ Begin VB.Form frmReceipt
          Strikethrough   =   0   'False
       EndProperty
       ForeColor       =   &H8000000E&
-      Height          =   555
+      Height          =   360
       Index           =   16
-      Left            =   4785
-      TabIndex        =   46
-      Top             =   8440
-      Width           =   2460
+      Left            =   4890
+      TabIndex        =   44
+      Top             =   8475
+      Width           =   2355
    End
    Begin VB.Shape Shape1 
       BorderColor     =   &H00FFFFFF&
@@ -1285,9 +1291,9 @@ Begin VB.Form frmReceipt
       ForeColor       =   &H00000000&
       Height          =   750
       Left            =   7320
-      TabIndex        =   47
-      Top             =   8440
-      Width           =   4855
+      TabIndex        =   45
+      Top             =   8280
+      Width           =   4860
    End
 End
 Attribute VB_Name = "frmReceipt"
@@ -1596,14 +1602,14 @@ Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
          Debug.Print p_oCPSales.Financer("nFinAmtxx")
       End If
    Case vbKeyF9
-      Set loFrmTradeIn = New frmCPTradeIn
-      
-      Set loFrmTradeIn.TradeIn = p_oCPSales.TITU
-      Set loFrmTradeIn.AppDriver = p_oAppDrivr
-   
-      loFrmTradeIn.Show 1
-      txtField(20).Text = Format(loFrmTradeIn.tranTotal, "#,##0.00")
-      lblChangeAmount = Format(CDbl(txtField(17)) + CDbl(txtField(19)) + CDbl(txtField(3)) + CDbl(txtField(13)) + CDbl(txtField(20)) + CDbl(txtField(21)) - lblTotalAmount, "#,##0.00")
+'      Set loFrmTradeIn = New frmCPTradeIn
+'
+'      Set loFrmTradeIn.TradeIn = p_oCPSales.TITU
+'      Set loFrmTradeIn.AppDriver = p_oAppDrivr
+'
+'      loFrmTradeIn.Show 1
+'      txtField(20).Text = Format(loFrmTradeIn.tranTotal, "#,##0.00")
+'      lblChangeAmount = Format(CDbl(txtField(17)) + CDbl(txtField(19)) + CDbl(txtField(3)) + CDbl(txtField(13)) + CDbl(txtField(20)) + CDbl(txtField(21)) - lblTotalAmount, "#,##0.00")
    Case vbKeyF10
       If p_oClient.Master("sClientID") = "" Then
          MsgBox "Invalid Client ID Detected!!!" & vbCrLf & _
@@ -1668,6 +1674,7 @@ Private Sub Form_Load()
                   " WHERE sDivisnID = " & strParm("MP")
    Call initDisc
    txtField(19) = "0.00"
+   txtField(20) = Format(p_oCPSales.TITU.TranTotl(), "#,##0.00")
 End Sub
 
 Private Sub Form_Unload(Cancel As Integer)
@@ -1678,8 +1685,6 @@ End Sub
 Private Sub Form_Initialize()
    p_bCancelxx = False
 End Sub
-
-
 
 
 
@@ -1699,10 +1704,10 @@ Private Sub txtField_Change(Index As Integer)
       lnCashAmt = 0#
       lnChkAmtx = 0#
       lnCardAmt = 0#
-      If IsNumeric(txtField(3).Text) Then lnCashAmt = CDbl(txtField(3).Text) + CDbl(txtField(17))
+      If IsNumeric(txtField(3).Text) Then lnCashAmt = CDbl(txtField(3).Text) + CDbl(txtField(17)) + CDbl(txtField(20)) + CDbl(txtField(21))
       If IsNumeric(txtField(8).Text) Then lnChkAmtx = CDbl(txtField(8).Text)
       If IsNumeric(txtField(13).Text) Then lnCardAmt = CDbl(txtField(13).Text)
-      lnTotlAmt = lnCashAmt + lnChkAmtx + lnCardAmt + CDbl(txtField(20).Text) + CDbl(txtField(21))   'p_oCPSales.Master("nTranTotl")
+      lnTotlAmt = lnCashAmt + lnChkAmtx + lnCardAmt '+ CDbl(txtField(20).Text) + CDbl(txtField(21))   'p_oCPSales.Master("nTranTotl")
       lnChangex = lnTotlAmt - p_oCPSales.Master("nTranTotl")  'lnTotlAmt - p_nAmtPaidx
       
       lblChangeAmount = Format(lnChangex, "#,##0.00")
@@ -2340,7 +2345,7 @@ End Function
 Private Function prcDiscount(ByVal lnRow As Long) As Boolean
    Dim lsProcName As String
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lbDiscount As Boolean
    
    lsProcName = "prcDiscount"
@@ -2358,20 +2363,20 @@ Private Function prcDiscount(ByVal lnRow As Long) As Boolean
                " WHERE sStockIDx = " & strParm(.Detail(lnRow, "sStockIDx"))
                
       Debug.Print lsSQL
-      Set loRS = New Recordset
-      loRS.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+      Set lors = New Recordset
+      lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
       
-      If loRS.EOF Then GoTo endProc
+      If lors.EOF Then GoTo endProc
 
       'iMac [2015.10.09]
       '  if yamaha club then jump to by brand cause it has no category on detail
       If p_oDiscount("sCardIDxx") = "M0011505" Then GoTo directToBrand
          
       ' priority discount will be the category
-      If loRS("sCategID1") <> "" Then
+      If lors("sCategID1") <> "" Then
          p_oDiscount.MoveFirst
          Do Until p_oDiscount.EOF
-            If loRS("sCategID1") = p_oDiscount("sCategrID") Then
+            If lors("sCategID1") = p_oDiscount("sCategrID") Then
                ' XerSys - 2015-06-08
                '  Check if their is a minimum unit price
                lbDiscount = False
@@ -2405,12 +2410,12 @@ Private Function prcDiscount(ByVal lnRow As Long) As Boolean
             
             p_oDiscount.MoveNext
          Loop
-      ElseIf loRS("sBrandIDx") <> "" Then
+      ElseIf lors("sBrandIDx") <> "" Then
 directToBrand:
          p_oDiscount.MoveFirst
          Do Until p_oDiscount.EOF
             ' check for per brand discount
-            If loRS("sBrandIDx") = p_oDiscount("sBrandIDx") Then
+            If lors("sBrandIDx") = p_oDiscount("sBrandIDx") Then
                ' XerSys - 2015-06-08
                '  Check if their is a minimum unit price
                lbDiscount = False
@@ -2513,40 +2518,40 @@ End Sub
 Private Function isTransValid(ByVal fdTranDate As Date, _
                                  ByVal fsTranType As String, _
                                  ByVal fsReferNox As String, ByVal fsAmountxx As Double) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsSQL As String
    
    isTransValid = True
    
-   Set loRS = New Recordset
-   loRS.Open "SELECT dUnEncode FROM Branch_Others WHERE sBranchCd = " & strParm(p_oAppDrivr.BranchCode) _
+   Set lors = New Recordset
+   lors.Open "SELECT dUnEncode FROM Branch_Others WHERE sBranchCd = " & strParm(p_oAppDrivr.BranchCode) _
    , p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
    
-   If loRS.EOF Then Exit Function
+   If lors.EOF Then Exit Function
    
-   If IsNull(loRS("dUnEncode")) Then
+   If IsNull(lors("dUnEncode")) Then
       Exit Function
    Else
       'she 2019-12-12
       'recode the alidation of unencoded transaction
-      If DateDiff("d", loRS("dUnEncode"), fdTranDate) >= 0 Then
+      If DateDiff("d", lors("dUnEncode"), fdTranDate) >= 0 Then
          'check the DTR_Summary here here
          lsSQL = "SELECT cPostedxx FROM DTR_Summary WHERE sBranchCd = " & strParm(p_oAppDrivr.BranchCode) & _
                   " AND sTranDate = " & strParm(Format(fdTranDate, "YYYYMMDD"))
          Debug.Print lsSQL
-         Set loRS = New Recordset
-         loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
+         Set lors = New Recordset
+         lors.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
       
-         If loRS.EOF Then
+         If lors.EOF Then
             isTransValid = True
          Else
             'if cPosted = 2, do not allow any transaction to encode
-            If loRS("cPostedxx") = xeStatePosted Then
+            If lors("cPostedxx") = xeStatePosted Then
                MsgBox "DTR Date was already posted!!!" & vbCrLf & _
                      "Please verify your entry then try again!!!", vbCritical, "WARNING"
                isTransValid = False
             'cposted = 1 then check referno to DTR_Summary_Detail
-            ElseIf loRS("cPostedxx") = xeStateClosed Then
+            ElseIf lors("cPostedxx") = xeStateClosed Then
                lsSQL = "SELECT b.cHasEntry, a.cPostedxx, b.nTranAmtx" & _
                   " FROM DTR_Summary a" & _
                   ", DTR_Summary_Detail b" & _
@@ -2559,22 +2564,22 @@ Private Function isTransValid(ByVal fdTranDate As Date, _
                   " AND b.nTranAmtx = " & fsAmountxx & _
                   " AND b.cHasEntry = " & strParm(xeNo)
                Debug.Print lsSQL
-               Set loRS = New Recordset
-               loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
+               Set lors = New Recordset
+               lors.Open lsSQL, p_oAppDrivr.Connection, adOpenForwardOnly, adLockReadOnly, adCmdText
                
-               If loRS.EOF Then
+               If lors.EOF Then
                   MsgBox "No Reference no found from unencoded transaction!!" & vbCrLf & _
                          "OR Transaction Amount is not equal to the unposted amount!!" & vbCrLf & _
                          " Pls check your entry then try again!!!"
                   isTransValid = False
-               ElseIf loRS("cHasEntry") = xeStateClosed Then
+               ElseIf lors("cHasEntry") = xeStateClosed Then
                    MsgBox "Reference No was already posted!!!" & vbCrLf & _
                            " Pls check your entry then try again!!!"
                   isTransValid = False
                Else
                   isTransValid = True
                End If
-            ElseIf loRS("cPostedxx") = xeStateOpen Then
+            ElseIf lors("cPostedxx") = xeStateOpen Then
                isTransValid = True
             Else
                isTransValid = False

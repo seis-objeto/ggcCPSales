@@ -64,6 +64,7 @@ Private p_oSCA_Const As New clsCodeGenConst
 
 Private p_xChecks As CheckInfo
 Private p_axReceipt As ReceiptInfo
+Private p_oFormTITU As frmCPTradeIn
 
 Private p_sBranchCd As String
 Private p_cTranStat As xeTransactionStatus
@@ -96,6 +97,8 @@ Private p_sSQLSRPx As String
 Private p_sSQLRebt As String
 
 Private pnCtr As Integer
+
+Private p_sTITUGaway As String
 
 Public Event DetailRetrieved(ByVal Index As Integer)
 Public Event MasterRetrieved(ByVal Index As Integer)
@@ -718,6 +721,7 @@ Function InitTransaction() As Boolean
                         ", a.sModified" & _
                         ", a.dModified"
       .MasterQuery = .MasterQuery & _
+                        ", a.cTradeInx" & _
                      " FROM " & .MasterTable & " a" & _
                            " LEFT JOIN Term e" & _
                               " ON a.sTermIDxx = e.sTermIDxx" & _
@@ -760,6 +764,7 @@ Function InitTransaction() As Boolean
                         ", g.sBrandNme"
       .DetailQuery = .DetailQuery & _
                         ", f.sColorNme" & _
+                        ", b.sCategID2" & _
                      " FROM " & .DetailTable & " a" & _
                         " LEFT JOIN CP_Inventory_Serial d" & _
                               " ON a.sStockIDx = d.sStockIDx" & _
@@ -864,8 +869,9 @@ Function InitTransaction() As Boolean
                                  ", " & psConcatDs & " xDescript" & _
                                  ", g.sSizeName" & _
                                  ", a.sCategID1" & _
-                                 ", a.nSelPrice xSelPrice"
-                                 
+                                 ", a.nSelPrice xSelPrice" & _
+                                 ", a.sCategID2"
+
       .BrowseDetailQuery(0) = .BrowseDetailQuery(0) & _
                               " FROM CP_Inventory a" & _
                                     " LEFT JOIN Color d" & _
@@ -910,7 +916,8 @@ Function InitTransaction() As Boolean
                                  ", " & psConcatDs & " xDescript" & _
                                  ", g.sSizeName" & _
                                  ", a.sCategID1" & _
-                                 ", a.nSelPrice xSelPrice"
+                                 ", a.nSelPrice xSelPrice" & _
+                                 ", a.sCategID2"
                                  
        .BrowseDetailQuery(0) = .BrowseDetailQuery(0) & _
                               " FROM CP_Inventory a" & _
@@ -1000,8 +1007,8 @@ Debug.Print pxeMODULENAME & "." & lsProcName
    
    p_sSQLSRPx = ""
    p_sSQLRebt = ""
+  
    Set p_oReturn = Nothing
-
 endProc:
    Exit Function
 errProc:
@@ -1151,22 +1158,26 @@ Function CloseTransaction(ByVal sTransNo As String) As Boolean
          If lors.EOF Then
             Cancel = False
          Else
-            Dim loReturn As clsCPSalesReturn
-            Set loReturn = New clsCPSalesReturn
-            Set loReturn.AppDriver = p_oAppDrivr
-            loReturn.InitTransaction
-            If Not loReturn.OpenTransaction(lors("sTransNox")) Then
-               MsgBox "Unable to open sales return" & vbCrLf & _
-                        " Pls contact SEG/SSG for assistance", vbCritical, "Warning"
-               Cancel = True
-               GoTo endProc
+            If p_oBaseClas.Master("cTranStat") = xeStateOpen Then
+                 Dim loReturn As clsCPSalesReturn
+                 Set loReturn = New clsCPSalesReturn
+                 Set loReturn.AppDriver = p_oAppDrivr
+                 loReturn.InitTransaction
+                 
+                 If Not loReturn.OpenTransaction(lors("sTransNox")) Then
+                    MsgBox "Unable to open sales return" & vbCrLf & _
+                             " Pls contact SEG/SSG for assistance", vbCritical, "Warning"
+                    Cancel = True
+                    GoTo endProc
+                 Else
+                    Cancel = Not loReturn.CloseTransaction(lors("sTransNox"))
+                    If Cancel = True Then GoTo endProc
+                 End If
+               Set lors = Nothing
             Else
-               Cancel = Not loReturn.CloseTransaction(lors("sTransNox"))
-               If Cancel = True Then GoTo endProc
+               Cancel = False
             End If
-          End If
-          
-          Set lors = Nothing
+         End If
       Else
          If Not p_oFinancer.EOF Then
             If p_oFinancer("sClientID") <> "" And _
@@ -1562,6 +1573,80 @@ errProc:
                         & ", " & Search & " )"
 End Function
 
+Function AddGCare() As Boolean
+   Dim lsSQL As String
+   Dim lsOldProc As String
+   Dim lasSplit() As String
+   Dim lnCtr As Integer
+   Dim lnPrice As Double
+   Dim lors As Recordset
+   
+   AddGCare = False
+   lsOldProc = "addGCare"
+   
+   'On Error GoTo errProc
+   
+   With p_oBaseClas
+      lnPrice = 0#
+      For lnCtr = 0 To ItemCount - 1
+         If .Detail(lnCtr, "cHsSerial") = xeYes And _
+            (.Detail(lnCtr, "nUnitPrce") - (.Detail(lnCtr, "nUnitPrce") * (.Detail(lnCtr, "nDiscRate") / 100)) - .Detail(lnCtr, "nDiscAmtx")) > 0 Then
+            lnPrice = (.Detail(lnCtr, "nUnitPrce") - (.Detail(lnCtr, "nUnitPrce") * (.Detail(lnCtr, "nDiscRate") / 100)) - .Detail(lnCtr, "nDiscAmtx"))
+            Exit For
+         End If
+      Next
+   End With
+   
+   lasSplit = Split(p_oAppDrivr.getConfiguration("TITUGCareI"), ";")
+   
+   For lnCtr = 0 To UBound(lasSplit)
+      lsSQL = lsSQL & ", " & strParm(lasSplit(lnCtr))
+   Next
+   lsSQL = Mid(lsSQL, 2)
+   
+   lsSQL = "SELECT" & _
+               "  a.sStockIDx" & _
+               ", a.sBarrcode" & _
+               ", a.sDescript" & _
+               ", a.nSelPrice" & _
+            " FROM CP_Inventory a" & _
+               ", GCarePlus_Matrix b" & _
+               ", CP_Inventory_Master c" & _
+            " WHERE a.sStockIDx = b.sStockIDx" & _
+               " AND a.sStockIDx = c.sStockIDx" & _
+               " AND c.sBranchCd = " & strParm(p_oAppDrivr.BranchCode) & _
+               " AND a.sCategID2 IN (" & lsSQL & ")" & _
+               " AND " & lnPrice & " BETWEEN b.nAmountFr AND b.nAmountTo"
+               
+   Debug.Print lsSQL
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, , , adCmdText
+   Set lors.ActiveConnection = Nothing
+   
+   lsSQL = KwikBrowse(p_oAppDrivr, _
+                        lors, _
+                        "sBarrcode»sDescript»nSelPrice»sStockIDx", _
+                        "Barcode»Description»SRP»ID")
+                        
+   If lsSQL = "" Then GoTo endProc
+   
+   lasSplit = Split(lsSQL, "»")
+   
+   If Trim(p_oBaseClas.Detail(ItemCount - 1, "sStockIDx")) <> "" Then AddDetail
+   
+   AddGCare = getDetail(ItemCount - 1, 1, lasSplit(1), False)
+   
+   If AddGCare Then
+      p_oBaseClas.Detail(ItemCount - 1, "nQuantity") = 1
+      
+      If p_oBaseClas.Detail(ItemCount - 1, "sCategID2") <> "C001056" Then
+         p_oBaseClas.Detail(ItemCount - 1, "nDiscRate") = CDbl(p_oAppDrivr.getConfiguration("TITUGCareD"))
+      End If
+   End If
+endProc:
+   Exit Function
+End Function
+
 Private Function getDetail(ByVal lnRow As Integer, _
                         ByVal lnIndex As Integer, _
                         ByVal lsValue As String, _
@@ -1663,6 +1748,7 @@ Private Function getDetail(ByVal lnRow As Integer, _
       .Detail(lnRow, "sSerialID") = ""
       .Detail(lnRow, "sSerialNo") = ""
       .Detail(lnRow, "sCategID1") = lasDetail(19)
+      .Detail(lnRow, "sCategID2") = lasDetail(21)
       .Detail(lnRow, "sModelIDx") = lasDetail(16)
       If .Detail(lnRow, "cHsSerial") = xeYes Then
          .Detail(lnRow, "sSerialNo") = lasDetail(13)
@@ -1682,7 +1768,7 @@ Private Function getDetail(ByVal lnRow As Integer, _
       'kalyptus - 2022.10.10 02.50pm
       'Check if branch is Biyaheng Fiesta
       '#Tag:Biyaheng Fiesta
-      If p_sBranchCd = "C0M2" Then
+      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C122" Then
          Set lors = getMFDiscountPrice(lnRow)
          If Not lors.EOF Then
             If MsgBox("Please ask the customer of PAYMENT MODE." & _
@@ -1733,6 +1819,7 @@ endWithClear:
       .Detail(lnRow, "sSerialNo") = ""
       .Detail(lnRow, "sModelIDx") = ""
       .Detail(lnRow, "sCategID1") = ""
+      .Detail(lnRow, "sCategID2") = ""
       
       p_sReferNox = ""
    End With
@@ -1927,11 +2014,16 @@ Private Function saveCPTransaction() As Boolean
          End If
       Next
       
-      If Not loCPTrans.Sales(.Master("sTransNox") _
-                  , .Master("dTransact") _
-                  , .Master("sClientID") _
-                  , .EditMode) Then
+      If lors.RecordCount = 0 Then
+         saveCPTransaction = True
          GoTo endProc
+      End If
+      
+      If Not loCPTrans.Sales(.Master("sTransNox") _
+                     , .Master("dTransact") _
+                     , .Master("sClientID") _
+                     , .EditMode) Then
+            GoTo endProc
       End If
    End With
       
@@ -2590,6 +2682,10 @@ Private Sub p_oBaseClas_InitMaster()
    p_oTITU.NewTransaction
    p_oTITU.TransNox = p_oBaseClas.Master("sTransNox")
    
+   Set p_oFormTITU = New frmCPTradeIn
+   Set p_oFormTITU.TradeIn = p_oTITU
+   Set p_oFormTITU.AppDriver = p_oAppDrivr
+   
    With p_axReceipt
       .TransNox = p_oBaseClas.Master("sTransNox")
       .TranTotl = 0#
@@ -2711,7 +2807,21 @@ Private Sub p_oBaseClas_InitMaster()
    ' create new client
    Call p_oClient.InitClient
    Call p_oLRApplic.InitTransaction
-     
+   
+   'mac 2024-11-12
+   '  TITU Giveaways ID
+   Dim lnCtr As Integer
+   Dim lasSplit() As String
+   
+   p_sTITUGaway = ""
+   lasSplit = Split(p_oAppDrivr.getConfiguration("TITUGCare"), ";")
+   
+   For lnCtr = 0 To UBound(lasSplit)
+      p_sTITUGaway = p_sTITUGaway & ", " & strParm(lasSplit(lnCtr))
+   Next
+   
+   p_sTITUGaway = Mid(p_sTITUGaway, 2)
+   'end - 'mac 2024-11-12
 endProc:
    Exit Sub
 errProc:
@@ -3034,6 +3144,7 @@ Private Sub p_oBaseClas_WillSave(Cancel As Boolean)
          .Detail(lnCtr, "sTransNox") = .Master("sTransNox")
          .Detail(lnCtr, "nEntryNox") = lnCtr + 1
       Next
+      
       .Master("nEntryNox") = lnCtr
       .Master("nAmtPaidx") = .Master("nTranTotl") - p_oFinancer("nAmtPaidx")
       Debug.Print .Detail(lnCtr, "nUnitprce")
@@ -3156,6 +3267,8 @@ Private Sub p_oBaseClas_WillSave(Cancel As Boolean)
          GoTo endProc
       End If
    End If
+   
+   p_oBaseClas.Master("cTradeInx") = IIf(p_oTITU.TranTotl > 0, xeYes, xeNo)
    
    Cancel = False
 
@@ -3563,6 +3676,10 @@ Private Sub ShowError(ByVal lsProcName As String)
    End With
 End Sub
 
+Public Sub showTITU()
+   p_oFormTITU.Show 1
+End Sub
+
 Private Function getNextInvoice() As String
    Dim lsCode As String
    
@@ -3745,7 +3862,7 @@ Private Function saveCard() As Boolean
    'mac 2023.02.01
    ' if given card discount is not the supposed discount of the unit from Mobile_Fiesta_Serial
    With p_oBaseClas
-      If p_sBranchCd = "C0M2" Then
+      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C122" Then
          For lnCtr = 0 To .ItemCount - 1
             If .Detail(lnCtr, "cHsSerial") = xeYes Then
                Set lors = getMFDiscountPrice(lnCtr)
@@ -4116,6 +4233,7 @@ Function getTerminal( _
                & ", sBankName" _
             & " FROM Banks" _
             & " WHERE cRecdStat = " & strParm(xeRecStateActive) _
+            & " AND cTerminal = " & strParm(xeRecStateActive) _
             & " ORDER BY sBankName"
    
    p_oCredtCard.Move lnRow, adBookmarkFirst
