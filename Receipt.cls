@@ -61,6 +61,11 @@ Property Get Client() As ggcClients.clsStandardClient
    Set Client = p_oClient
 End Property
 
+
+Property Get ReceiptForm() As Object
+   Set ReceiptForm = p_oForm
+End Property
+
 Property Let Client(loClient As ggcClients.clsStandardClient)
    Set p_oClient = loClient
 End Property
@@ -295,6 +300,26 @@ Sub ShowReceipt()
       .txtField(15) = Format(p_dTransact, "MMM-DD-YYYY")
       .txtField(16) = p_sORNoxxxx
       .txtField(18) = p_sDiscCard
+      
+      If Not p_oCPSales.ConnectQR Is Nothing Then
+'      Debug.Print ("QR Value ClientID Found = " + p_oCPSales.Client.Master("sClientID"))
+'        If p_oCPSales.Client.Master("sClientID") <> "" Then
+'            If Not p_oCPSales.Client.SearchClient(p_oCPSales.Client.Master("sClientID"), True) Then
+'                 Call .getCustomer(p_oCPSales.Client.Master("sCompnyNm"), False)
+'            End If
+'        Else
+'            If Not p_oCPSales.Client.SearchClient(p_oCPSales.Client.Master("sCompnyNm"), False) Then
+'                Call .getCustomer(p_oCPSales.Client.Master("sCompnyNm"), False)
+'            End If
+'        End If
+        
+        If p_oCPSales.ConnectQR.Item("sPaymInfo").Item("paymentForm") = 2 Then
+            .txtField(3) = Format(p_oCPSales.Financer("nAmtPaidx"), "#,##0.00")
+            .txtField(19) = Format(p_oCPSales.Financer("nFinAmtxx"), "#,##0.00")
+            .lblChangeAmount = "0.00"
+        End If
+      End If
+      
       
       .EnableCheckInfo = p_xChecks.Amountxx > 0
       .EnableCheckInfo = p_xCardxx.Amountxx > 0

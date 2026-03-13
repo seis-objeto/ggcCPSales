@@ -231,7 +231,7 @@ Function InitTransaction() As Boolean
                         ", a.sAddedByx" & _
                         ", a.dAddedDte" & _
                         ", a.sModified" & _
-                        ", a.dModified"
+                        ", a.dModified, a.sOrderNox"
       .MasterQuery = .MasterQuery & _
                      " FROM " & .MasterTable & " a" & _
                         ", Branch b" & _
@@ -759,6 +759,7 @@ Function CloseTransaction(ByVal sTransNo As String)
    Dim lsAppvName As String
    Dim lbApproved As Boolean
    Dim lsApprovedCD As String
+   Dim lnRow As Integer
    
    lsProcName = "CloseTransaction"
    Debug.Print pxeMODULENAME & "." & lsProcName
@@ -910,45 +911,69 @@ Function CloseTransaction(ByVal sTransNo As String)
 '      End If
    
    
-   If pbInitTran Then
-        lbGetApproval = MsgBox("Transfer of inventory needs authorization from Manager/Officer." & _
-                          vbCrLf & "Seek Authorized User's Approval?", _
-                          vbQuestion + vbYesNo + vbDefaultButton2, "Warning")
-        If Not lbGetApproval Then
-           MsgBox "Seeking of authorization cancelled!!!" & vbCrLf & _
-              "Request can not be granted!!!", vbCritical, "Warning"
-           GoTo endProc
-        End If
-
-        If GetApproval(p_oAppDrivr, _
-              lnAppvRights, _
-              lsAppvID, _
-              lsAppvName, _
-              p_oAppDrivr.MenuName) = False Then GoTo endProc
-
-        If lsAppvID = p_oAppDrivr.UserID Or lnAppvRights < xeManager Then
-           MsgBox "Approving Officer Has no Right to authorize transfer!!!" & vbCrLf & _
-              "Request can not be granted!!!", vbCritical, "Warning"
-           GoTo endProc
-        End If
+'   If pbInitTran Then
+      'she 2025-08-08 magseek lang ng approval kapag walang order#
+      'she 2025-08-08 to temporary diable the approval if order# is empty. approval code using apps is not yet implemented
+'      If Trim(Master("sOrderNox")) = "" Then
+'         lbGetApproval = MsgBox("Transfer of inventory needs authorization from Manager/Officer." & _
+'                          vbCrLf & "Seek Authorized User's Approval?", _
+'                          vbQuestion + vbYesNo + vbDefaultButton2, "Warning")
+'         If Not lbGetApproval Then
+'            MsgBox "Seeking of authorization cancelled!!!" & vbCrLf & _
+'                  "Request can not be granted!!!", vbCritical, "Warning"
+'            GoTo endProc
+'         End If
+'
+'         If GetApproval(p_oAppDrivr, _
+'              lnAppvRights, _
+'              lsAppvID, _
+'              lsAppvName, _
+'              p_oAppDrivr.MenuName) = False Then GoTo endProc
+'
+'         If lsAppvID = p_oAppDrivr.UserID Or lnAppvRights < xeManager Then
+'            MsgBox "Approving Officer Has no Right to authorize transfer!!!" & vbCrLf & _
+'                  "Request can not be granted!!!", vbCritical, "Warning"
+'            GoTo endProc
+'         End If
+'      End If
+      
+      p_oAppDrivr.BeginTrans
         
-        p_oAppDrivr.BeginTrans
+      If saveCPTransaction() = False Then
+         p_oAppDrivr.RollbackTrans
+         GoTo endProc
+      End If
         
-        If saveCPTransaction() = False Then
-            p_oAppDrivr.RollbackTrans
+        
+      lnRow = p_oAppDrivr.Execute("UPDATE CP_Transfer_Master " & _
+                                          " SET cTranStat = " & strParm(xeStateClosed) & _
+                                          ", sModified = " & strParm(p_oAppDrivr.UserID) & _
+                                          ", dModified = " & dateParm(p_oAppDrivr.ServerDate) & _
+                                       " WHERE sTransNox = " & strParm(sTransNo), "CP_Transfer_Master", p_sBranchCd, p_sDestinat)
+         
+         If lnRow <= 0 Then
+            MsgBox "Unable to update CP Transfer Master!!!" & vbCrLf & _
+                     "Please contact GGC SEG/SSG for assistance...", vbCritical, "WARNING"
+            
+            CloseTransaction = False
             GoTo endProc
-        End If
+         End If
+      
+      p_oAppDrivr.CommitTrans
         
-        CloseTransaction = p_oBaseClas.CloseTransaction(sTransNo)
-        
-        If CloseTransaction Then
-            p_oAppDrivr.CommitTrans
-        Else
-            p_oAppDrivr.RollbackTrans
-        End If
-   End If
+'      CloseTransaction = p_oBaseClas.CloseTransaction(sTransNo)
+'      If CloseTransaction Then
+'         p_oAppDrivr.CommitTrans
+'      Else
+'         p_oAppDrivr.RollbackTrans
+'      End If
+      
+'   End If
    
 endProc:
+   Exit Function
+endWithRoll:
+   p_oAppDrivr.RollbackTrans
    Exit Function
 errProc:
     ShowError lsProcName & "( " & sTransNo & " )"
@@ -1086,6 +1111,7 @@ Function SearchMaster(ByVal Index As Variant, Optional Value As Variant = "") As
    
    If Not IsNumeric(Index) Then Index = LCase(Index)
    Select Case Index
+   
    Case 2, "sdestinat"
       getMaster Value, True
    Case Else

@@ -1,5 +1,5 @@
 VERSION 5.00
-Object = "{34A378CB-112C-461B-94E8-02D25370A1CE}#8.1#0"; "xrControl.ocx"
+Object = "{34A378CB-112C-461B-94E8-02D25370A1CE}#8.1#0"; "xrcontrol.ocx"
 Begin VB.Form frmReceipt 
    BackColor       =   &H00808080&
    BorderStyle     =   0  'None
@@ -1458,6 +1458,15 @@ Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
       InitCardField False
       InitCheckField False
    Case vbKeyF5
+     If p_oCPSales.Financer("sClientID") <> "" And _
+         p_oCPSales.Financer("nFinAmtxx") > 0 Then
+         Debug.Print (p_oCPSales.Master("nTranTotl"))
+            If p_oCPSales.Financer("nAmtPaidx") >= p_oCPSales.Master("nTranTotl") Then
+               MsgBox "Invalid amount paid!!!" & vbCrLf & _
+                  "Paid amount must fit from payment type!!!", vbCritical, "Warning"
+               Exit Sub
+            End If
+      End If
       If Not isTransValid(CDate(txtField(15)), "CPSl", Trim(txtField(14)), CDbl(txtField(3).Text) + CDbl(txtField(13).Text)) Then 'CDbl(lblTotalAmount)
          p_bCancelxx = True
          Unload Me
@@ -1569,10 +1578,9 @@ Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
          txtField(13) = Format(p_oCPSales.Receipt("nCardAmtx"), "#,##0.00")
          p_sCrdBankID = p_oCPSales.Card(pnCtr, "sBankIDxx")
       Next
-      
+        
       lblTotalAmount = Format(p_oCPSales.Master("nTranTotl"), "#,##0.00") '+ p_oCPSales.Master("nCashAmtx")
       lblChangeAmount = Format(CDbl(txtField(17)) + CDbl(txtField(19)) + CDbl(txtField(3)) + CDbl(txtField(13)) + CDbl(txtField(20)) + CDbl(txtField(21)) - lblTotalAmount, "#,##0.00")
-
 '      lblChangeAmount = Format(lblTotalAmount - CDbl(txtField(17)) - CDbl(txtField(19)) - CDbl(txtField(3)) - CDbl(txtField(13)), "#,##0.00")
    Case vbKeyF8
       If p_oClient.Master("sClientID") = "" Then
@@ -1674,7 +1682,7 @@ Private Sub Form_Load()
                   " WHERE sDivisnID = " & strParm("MP")
    Call initDisc
    txtField(19) = "0.00"
-   txtField(20) = Format(p_oCPSales.TITU.TranTotl(), "#,##0.00")
+   txtField(20) = IFNull(Format(p_oCPSales.TITU.TranTotl(), "#,##0.00"), "0.00")
 End Sub
 
 Private Sub Form_Unload(Cancel As Integer)
@@ -2287,7 +2295,7 @@ errProc:
    GoTo endProc
 End Function
 
-Private Function getCustomer(ByVal lsValue As String, ByVal lbSearch As Boolean) As Boolean
+Public Function getCustomer(ByVal lsValue As String, ByVal lbSearch As Boolean) As Boolean
    Dim lsProcName As String
    Dim lasName() As String
    Dim lbExist As Boolean

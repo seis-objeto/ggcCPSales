@@ -61,6 +61,8 @@ Private p_oTITU As clsTITU
 Private p_oLRApplic As ggcLRApplication.clsLRApplicationMP
 Private p_oLRMaster As clsLRMasterMP
 Private p_oSCA_Const As New clsCodeGenConst
+Private p_ormjJSON As New clsJSON
+
 
 Private p_xChecks As CheckInfo
 Private p_axReceipt As ReceiptInfo
@@ -82,6 +84,7 @@ Private p_nMinDownx As Double
 Private pbModified As Boolean
 Private pbInitTran As Boolean
 Private pbShowMsg As Boolean
+Private p_sTerm As String
 
 Private psConcatDs As String
 Private psModelIDs As String
@@ -95,10 +98,14 @@ Private psAcctNmbr As String
 
 Private p_sSQLSRPx As String
 Private p_sSQLRebt As String
+Private p_oConnectForm As frmGConnect
+Private p_sOrderTransaction As String
 
 Private pnCtr As Integer
 
 Private p_sTITUGaway As String
+Private p_oConnectQR As Object
+Private p_sPaymForm As String
 
 Public Event DetailRetrieved(ByVal Index As Integer)
 Public Event MasterRetrieved(ByVal Index As Integer)
@@ -117,6 +124,18 @@ End Property
 
 Property Get Client() As clsStandardClient
    Set Client = p_oClient
+End Property
+
+Property Let ConnectQR(loConnectQR As Object)
+   Set p_oConnectQR = loConnectQR
+End Property
+
+Property Get ConnectQR() As Object
+   Set ConnectQR = p_oConnectQR
+End Property
+
+Property Get OrderTransaction() As String
+   OrderTransaction = p_sOrderTransaction
 End Property
 
 Property Get TITU() As clsTITU
@@ -988,6 +1007,8 @@ Function InitTransaction() As Boolean
       If .InitTransaction = False Then GoTo endProc
    End With
    
+   p_sPaymForm = "0"
+   
    pbInitTran = InitTransaction
 
 endProc:
@@ -1007,6 +1028,7 @@ Debug.Print pxeMODULENAME & "." & lsProcName
    
    p_sSQLSRPx = ""
    p_sSQLRebt = ""
+   p_sTerm = ""
   
    Set p_oReturn = Nothing
 endProc:
@@ -1297,13 +1319,15 @@ Function SearchReferNo(ByVal Index As Variant, _
   
    Case 1, "xrefernox"
       lsCondition1 = " AND a.sBarrCode LIKE " & strParm("%" & Trim(Value)) _
-                     & IIf(EditMode = xeModeAddNew, " AND nQtyOnHnd >= 1", "")
+                   & IIf(EditMode = xeModeAddNew, " AND ((nQtyOnHnd >= 1) OR (a.sCategID1 = 'C001052'))", "")
+'                     & IIf(EditMode = xeModeAddNew, " AND nQtyOnHnd >= 1", "")
       
       lsCondition2 = " AND f.sSerialNo LIKE " & strParm("%" & Trim(Value)) _
                      & IIf(EditMode = xeModeAddNew, " AND nQtyOnHnd >= 1", "")
    Case 2, "sdescript"
       lsCondition1 = " AND " & psConcatDs & " LIKE " & strParm(Trim(Value) & "%") _
-                     & IIf(EditMode = xeModeAddNew, " AND nQtyOnHnd >= 1", "")
+                   & IIf(EditMode = xeModeAddNew, " AND ((nQtyOnHnd >= 1) OR (a.sCategID1 = 'C001052'))", "")
+'                     & IIf(EditMode = xeModeAddNew, " AND nQtyOnHnd >= 1", "")
                      
       lsCondition2 = lsCondition1
    End Select
@@ -1768,20 +1792,57 @@ Private Function getDetail(ByVal lnRow As Integer, _
       'kalyptus - 2022.10.10 02.50pm
       'Check if branch is Biyaheng Fiesta
       '#Tag:Biyaheng Fiesta
-      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C122" Then
+      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C134" Then
          Set lors = getMFDiscountPrice(lnRow)
          If Not lors.EOF Then
+'            If p_sPaymForm = "1" Then
+'               .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
+'               .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
+'               .Detail(lnRow, "nDiscRate") = lors("nCardRate")
+'               .Detail(lnRow, "nDiscAmtx") = lors("nCardAmtx")
+'            Else
+'               .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
+'               .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
+'               .Detail(lnRow, "nDiscRate") = lors("nDiscRate")
+'               .Detail(lnRow, "nDiscAmtx") = lors("nDiscAmtx")
+'            End If
+            
+            If p_sTerm = "0" Then
+               GoTo cashPayment
+            ElseIf p_sTerm = "6" Or p_sTerm = "12" Then
+               GoTo askforTerm
+            End If
+            
             If MsgBox("Please ask the customer of PAYMENT MODE." & _
                         "Press YES if CASH PAYMENT, otherwise press NO.", vbQuestion + vbYesNo, "Confirm") = vbYes Then
+cashPayment:
                .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
                .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
                .Detail(lnRow, "nDiscRate") = lors("nDiscRate")
                .Detail(lnRow, "nDiscAmtx") = lors("nDiscAmtx")
+               
+               p_sTerm = "0"
             Else
+askforTerm:
+               If p_sTerm = "" Then
+                  p_sTerm = InputBox("Please key in 6 or 12 for the term.", "Input term")
+               End If
+               
+               If p_sTerm <> "6" And p_sTerm <> "12" Then
+                  MsgBox "Invalid term input", vbCritical, "Warning"
+                  GoTo askforTerm
+               End If
+               
                .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
                .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
                .Detail(lnRow, "nDiscRate") = lors("nCardRate")
-               .Detail(lnRow, "nDiscAmtx") = lors("nCardAmtx")
+               
+               Select Case p_sTerm
+               Case "6"
+                  .Detail(lnRow, "nDiscAmtx") = lors("nUnitprce") - lors("n06MoTerm")
+               Case "12"
+                  .Detail(lnRow, "nDiscAmtx") = lors("nUnitprce") - lors("n12MoTerm")
+               End Select
             End If
          End If
       End If
@@ -2054,14 +2115,14 @@ Private Function saveCPOtherInfo() As Boolean
       With p_oClient
          If Trim(.Master("sLastName")) <> "" _
             And Trim(.Master("sFrstName")) <> "" Then
-            If Not pbShowMsg Then
+            'If Not pbShowMsg Then 'mac 2026.02.27 icomment ko lang ito bat may validation na ganito?
                If Not .SaveClient Then
                   MsgBox "Unable to Save Client Info!!!", vbCritical, "Warning"
                   GoTo endProc
                Else
                   p_oBaseClas.Master("sClientID") = .Master("sClientID")
                End If
-            End If
+            'End If
          Else
             If pbShowMsg Then
                p_oBaseClas.Master("sClientID") = ""
@@ -2485,6 +2546,8 @@ Private Sub computeTotal()
    'On Error GoTo errProc
 
    With p_oBaseClas
+      If .ItemCount = 1 And IFNull(.Detail(0, "sStockIDx")) = "" Then p_sTerm = ""
+   
       .Master("nTranTotl") = 0
       For lnCtr = 0 To .ItemCount - 1
          .Master("nTranTotl") = .Master("nTranTotl") + .Detail(lnCtr, "nUnitPrce")
@@ -2965,8 +3028,38 @@ Private Sub p_oBaseClas_SaveOthers(Cancel As Boolean)
 
    With p_oBaseClas
       ' save cp
-'      If saveCPTransaction() = False Then GoTo endProc
-'      If saveCPOtherInfo() = False Then GoTo endProc
+      
+      'mac 2026.02.26
+      '  galing ito sa will save, nilipat ko dito
+      
+      'she
+      '2015-04-07 4:20 PM
+      'Update S.I# to Branch_Others so that we can get the next invoice for the next transaction
+      If CDbl(IIf(.Master("sSalesInv") = "", 0, .Master("sSalesInv"))) > CDbl(p_oAppDrivr.Config("sSalesInv")) Then
+         lsSQL = "UPDATE Branch_Others" & _
+             " SET sSalesInv = " & strParm(.Master("sSalesInv")) & _
+             " WHERE sBranchCD = " & strParm(p_oAppDrivr.BranchCode)
+             Debug.Print (lsSQL)
+         Call p_oAppDrivr.Execute(lsSQL, "Branch_Others")
+      End If
+      
+      If p_sOrderTransaction <> "" Then
+         lsSQL = "UPDATE Order_Taker" & _
+             " SET cTranStat = " & strParm(xeTransactionStatus.xeStateClosed) & _
+             ", sModified = " & strParm(p_oAppDrivr.UserID) & _
+             ", dModified = " & dateParm(p_oAppDrivr.ServerDate) & _
+             " WHERE sTransNox = " & strParm(p_sOrderTransaction)
+             Debug.Print (lsSQL)
+         Call p_oAppDrivr.Execute(lsSQL, "Order_Taker")
+      End If
+      
+      'end - mac 2026.02.26
+      
+      'mac 2026.02.26
+      '  ienable ko muna itong dalawang line. nakacomment out ito at nilagay sa will save dati.
+      If saveCPTransaction() = False Then GoTo endProc
+      If saveCPOtherInfo() = False Then GoTo endProc
+      'end - mac 2026.02.26
 
       ' only institutional sales has its transaction ledger
 '      If .Master("cCustType") = 1 Then
@@ -3126,17 +3219,31 @@ Private Sub p_oBaseClas_WillSave(Cancel As Boolean)
       Debug.Print .Master("sSalesInv")
       If Not checkSRP() Then GoTo endProc
       
-      'she
-      '2015-04-07 4:20 PM
-      'Update S.I# to Branch_Others so that we can get the next invoice for the next transaction
-      If CDbl(IIf(.Master("sSalesInv") = "", 0, .Master("sSalesInv"))) > CDbl(p_oAppDrivr.Config("sSalesInv")) Then
-         lsSQL = "UPDATE Branch_Others" & _
-             " SET sSalesInv = " & strParm(.Master("sSalesInv")) & _
-             " WHERE sBranchCD = " & strParm(p_oAppDrivr.BranchCode)
-             Debug.Print (lsSQL)
-         Call p_oAppDrivr.Execute(lsSQL, "Branch_Others")
-      End If
-            
+      'mac 2026.02.26
+      '  ilipat ko itong block of code sa save others, wala dapat database transactions dito sa will save
+
+'      'she
+'      '2015-04-07 4:20 PM
+'      'Update S.I# to Branch_Others so that we can get the next invoice for the next transaction
+'      If CDbl(IIf(.Master("sSalesInv") = "", 0, .Master("sSalesInv"))) > CDbl(p_oAppDrivr.Config("sSalesInv")) Then
+'         lsSQL = "UPDATE Branch_Others" & _
+'             " SET sSalesInv = " & strParm(.Master("sSalesInv")) & _
+'             " WHERE sBranchCD = " & strParm(p_oAppDrivr.BranchCode)
+'             Debug.Print (lsSQL)
+'         Call p_oAppDrivr.Execute(lsSQL, "Branch_Others")
+'      End If
+'
+'      If p_sOrderTransaction <> "" Then
+'         lsSQL = "UPDATE Order_Taker" & _
+'             " SET cTranStat = " & strParm(xeTransactionStatus.xeStateClosed) & _
+'             ", sModified = " & strParm(p_oAppDrivr.UserID) & _
+'             ", dModified = " & dateParm(p_oAppDrivr.ServerDate) & _
+'             " WHERE sTransNox = " & strParm(p_sOrderTransaction)
+'             Debug.Print (lsSQL)
+'         Call p_oAppDrivr.Execute(lsSQL, "Order_Taker")
+'      End If
+      
+      'end - mac 2026.02.26
       For lnCtr = 0 To .ItemCount - 1
          Debug.Print .Detail(lnCtr, "nUnitprce")
          Debug.Print .Detail(lnCtr, "sStockIDx")
@@ -3147,12 +3254,15 @@ Private Sub p_oBaseClas_WillSave(Cancel As Boolean)
       
       .Master("nEntryNox") = lnCtr
       .Master("nAmtPaidx") = .Master("nTranTotl") - p_oFinancer("nAmtPaidx")
-      Debug.Print .Detail(lnCtr, "nUnitprce")
-      If saveCPTransaction() = False Then GoTo endProc
       
-      Debug.Print .Detail(0, "nUnitprce")
-      If saveCPOtherInfo() = False Then GoTo endProc
-      Debug.Print .Detail(0, "nUnitprce")
+      'mac 2026.02.26
+      '  why these procedures are in will save? should it be located on save others? nasa save others ito originally.
+      '  gumagalaw na kasi ang database pag dinaanan ito, kahit hindi pa successful ang transaction
+      '  icomment-out ko lang, ienable ko yung nasa save others
+      'If saveCPTransaction() = False Then GoTo endProc
+      'If saveCPOtherInfo() = False Then GoTo endProc
+      'end - mac 2026.02.26
+      
 'Note:
 '      If p_oFinancer("sClientID") <> "" And _
 '         p_oFinancer("sReferNox") <> "" And _
@@ -3861,24 +3971,26 @@ Private Function saveCard() As Boolean
    
    'mac 2023.02.01
    ' if given card discount is not the supposed discount of the unit from Mobile_Fiesta_Serial
-   With p_oBaseClas
-      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C122" Then
-         For lnCtr = 0 To .ItemCount - 1
-            If .Detail(lnCtr, "cHsSerial") = xeYes Then
-               Set lors = getMFDiscountPrice(lnCtr)
-               If Not lors.EOF Then
-                  If .Detail(lnCtr, "nDiscAmtx") <> lors("nCardAmtx") Or _
-                     .Detail(lnCtr, "nDiscRate") <> lors("nCardRate") Then
-                     MsgBox "Invalid discount for CARD PAYMENT. Please refer to our official pricelist.", vbCritical, "Warning"
-                     Exit Function
-                  End If
-               End If
-            End If
-         Next
-      End If
-   End With
+'   With p_oBaseClas
+'      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C134" Then
+'         For lnCtr = 0 To .ItemCount - 1
+'            If .Detail(lnCtr, "cHsSerial") = xeYes Then
+'               Set lors = getMFDiscountPrice(lnCtr)
+'               If Not lors.EOF Then
+'                  If .Detail(lnCtr, "nDiscAmtx") <> lors("nCardAmtx") Or _
+'                     .Detail(lnCtr, "nDiscRate") <> lors("nCardRate") Then
+'                     MsgBox "Invalid discount for CARD PAYMENT. Please refer to our official pricelist.", vbCritical, "Warning"
+'                     Exit Function
+'                  End If
+'               End If
+'            End If
+'         Next
+'      End If
+'   End With
    
-   p_oAppDrivr.BeginTrans
+   'mac 2026.02.26
+   '  bakit may begin dito? using base class ito, i believe it's not  not necesarry
+   'p_oAppDrivr.BeginTrans
          
    With p_oCredtCard
       'Position the record pointer to the first record
@@ -3938,7 +4050,10 @@ Private Function saveCard() As Boolean
       Loop
    End With
    
-   p_oAppDrivr.CommitTrans
+   'mac 2026.02.26
+   '  bakit may commit dito? using base class ito, i believe it's not  not necesarry.
+   '  wala rin naman rollback kapag hindi successful ang database action
+   'p_oAppDrivr.CommitTrans
    
    saveCard = True
 End Function
@@ -4514,19 +4629,28 @@ Function getFinancer( _
             & " ORDER BY a.sCompnyNm"
    
    If lsValue <> "" Then
-      ' Description
-      If lsValue = p_oFinancer("sCompnyNm") Then GoTo endProc
-      If lbSearch Then
-         lsDetail = "a.sCompnyNm LIKE " & strParm(Trim(lsValue) & "%")
-      Else
-         lsDetail = "a.sCompnyNm = " & strParm(Trim(lsValue))
-      End If
+        If lsValue = p_oFinancer("sCompnyNm") Then GoTo endProc
+        If (p_oConnectQR Is Nothing) Then
+            ' Description
+            If lbSearch Then
+               lsDetail = "a.sCompnyNm LIKE " & strParm(Trim(lsValue) & "%")
+            Else
+               lsDetail = "a.sCompnyNm = " & strParm(Trim(lsValue))
+            End If
+        Else
+            If lbSearch Then
+               lsDetail = "a.sCompnyNm LIKE " & strParm(Trim(lsValue) & "%")
+            Else
+               lsDetail = "a.sClientID = " & strParm(Trim(lsValue))
+            End If
+            
+        End If
    ElseIf lbSearch = False Then
       GoTo endWithClear
    End If
             
    lsSQL = AddCondition(lsSQL, lsDetail)
-   
+   Debug.Print lsSQL
    Set lors = New Recordset
    lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
 
@@ -5457,6 +5581,11 @@ Private Function getMFDiscountPrice(ByVal lnRow As Integer) As Recordset
                ", IFNull(a.nDiscAmtx, d.nDiscAmtx) nDiscAmtx" & _
                ", IFNull(a.nCardRate, d.nCardRate) nCardRate" & _
                ", IFNull(a.nCardAmtx, d.nCardAmtx) nCardAmtx" & _
+               ", IFNULL(a.n03MoTerm, d.n03MoTerm) n03MoTerm" & _
+               ", IFNULL(a.n06MoTerm, d.n06MoTerm) n06MoTerm" & _
+               ", IFNULL(a.n12MoTerm, d.n12MoTerm) n12MoTerm" & _
+               ", IFNULL(a.n24MoTerm, d.n24MoTerm) n24MoTerm" & _
+               ", IFNULL(a.n36MoTerm, d.n36MoTerm) n36MoTerm" & _
              " FROM CP_Inventory_Serial b" & _
                 " LEFT JOIN Mobile_Fiesta_Serial a on b.sSerialID = a.sSerialID AND a.sFiestaCD = " & strParm(lsMFPeriod) & _
                 " LEFT JOIN CP_Inventory c on b.sStockIDx = c.sStockIDx" & _
@@ -5468,4 +5597,114 @@ Private Function getMFDiscountPrice(ByVal lnRow As Integer) As Recordset
    End With
 End Function
 
+Public Function LoadConnect() As Boolean
+   Dim lnResult As Long
+   Dim lsQRValue As String
+   Dim plbCancelxx As Boolean
+   
+   LoadConnect = False
+
+   If p_oAppDrivr Is Nothing Then GoTo endProc
+   Set p_oConnectForm = New frmGConnect
+   Set p_oConnectForm.AppDriver = p_oAppDrivr
+   Set p_oConnectQR = Nothing
+   Set p_ormjJSON = New clsJSON
+   
+   With p_oConnectForm
+      .ConnectQR = Nothing
+      .Show 1
+      
+      plbCancelxx = .Cancelled
+         
+      If plbCancelxx Then
+         Unload p_oConnectForm
+         GoTo endProc
+      End If
+      
+      p_sPaymForm = .PaymentForm
+      p_sOrderTransaction = .OrderTransaction
+      Set p_oConnectQR = .ConnectQR()
+      Unload p_oConnectForm
+        
+      LoadConnect = True
+   End With
+endProc:
+   Exit Function
+End Function
+
+'this will open camera and load/parse qr to detail
+Public Function LoadConnectQR()
+End Function
+
+Public Function getQRClient() As Boolean
+   Dim lsOldProc As String
+   Dim lsSQL As String
+   Dim lnCtr As Integer
+
+   Dim lsProcName As String
+   Dim lbExist As Boolean
+   Dim loClient As clsStandardClient
+   Dim lsDetail As String
+
+   lsOldProc = "getQRCleint"
+   Debug.Print pxeMODULENAME & "." & lsOldProc
+   'On Error GoTo errProc
+   
+   getQRClient = False
+   
+    If p_oConnectQR.Item("sCustInfo").Item("firstName") <> "" Then
+        lsDetail = "sFrstName LIKE " & strParm(Trim(p_oConnectQR.Item("sCustInfo").Item("firstName")) & "%")
+        lsSQL = AddCondition(lsSQL, lsDetail)
+    End If
+    
+    If p_oConnectQR.Item("sCustInfo").Item("middleName") <> "" Then
+        lsDetail = "sMiddName LIKE " & strParm(Trim(p_oConnectQR.Item("sCustInfo").Item("middleName")) & "%")
+        lsSQL = AddCondition(lsSQL, lsDetail)
+    End If
+    
+    If p_oConnectQR.Item("sCustInfo").Item("lastName") <> "" Then
+        lsDetail = "sLastName LIKE " & strParm(Trim(p_oConnectQR.Item("sCustInfo").Item("lastName")) & "%")
+        lsSQL = AddCondition(lsSQL, lsDetail)
+    End If
+    
+    If p_oConnectQR.Item("sCustInfo").Item("suffixName") <> "" Then
+        lsDetail = "sSuffixNm LIKE " & strParm(Trim(p_oConnectQR.Item("sCustInfo").Item("suffixName")) & "%")
+        lsSQL = AddCondition(lsSQL, lsDetail)
+    End If
+    
+    If p_oConnectQR.Item("sCustInfo").Item("address") <> "" Then
+        lsDetail = "sAddressx LIKE " & strParm(Trim(p_oConnectQR.Item("sCustInfo").Item("address")) & "%")
+        lsSQL = AddCondition(lsSQL, lsDetail)
+    End If
+    
+    If p_oConnectQR.Item("sCustInfo").Item("townID") <> "" Then
+        lsDetail = "sTownIDxx LIKE " & strParm(Trim(p_oConnectQR.Item("sCustInfo").Item("townID")) & "%")
+        lsSQL = AddCondition(lsSQL, lsDetail)
+    End If
+   
+   Set loClient = New clsStandardClient
+   With loClient
+      Set .AppDriver = p_oAppDrivr
+      .Branch = p_sBranchCd
+      If .InitClient() = False Then GoTo endProc
+   End With
+   
+   lbExist = loClient.SearchClient(p_oConnectQR.Item("sCustInfo").Item("lastName") & ", " & p_oConnectQR.Item("sCustInfo").Item("firstName") + "%", False)
+   
+   If loClient.getClient Then
+      Set p_oClient = loClient
+   End If
+   
+p_oClient.Master("cCPClient") = "1"
+   
+   getQRClient = True
+   
+endProc:
+   Exit Function
+endWithClear:
+   GoTo endProc
+errProc:
+    ShowError lsProcName & "( " & "" _
+                        & ", " & "" & " )"
+End Function
 

@@ -1155,7 +1155,8 @@ Private Function getDetail(ByVal lnRow As Integer, _
       If .Detail(lnRow, "cHsSerial") = xeYes Then
          .Detail(lnRow, "sSerialNo") = lasDetail(13)
          .Detail(lnRow, "sSerialID") = lasDetail(14)
-         .Detail(lnRow, "nUnitPrce") = lasDetail(17)
+         .Detail(lnRow, "nUnitPrce") = CDbl(lasDetail(16)) * CDbl(lasDetail(17)) * _
+                                                           (100 - CDbl(lasDetail(18))) / 100 - lasDetail(19)
       End If
       .Detail(lnRow, "sModelIDx") = lasDetail(23)
    End With

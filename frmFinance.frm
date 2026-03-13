@@ -1,5 +1,5 @@
 VERSION 5.00
-Object = "{34A378CB-112C-461B-94E8-02D25370A1CE}#8.1#0"; "xrControl.ocx"
+Object = "{34A378CB-112C-461B-94E8-02D25370A1CE}#8.1#0"; "xrcontrol.ocx"
 Begin VB.Form frmFinancer 
    BorderStyle     =   0  'None
    Caption         =   "FINANCE"
@@ -349,14 +349,14 @@ Private Sub Form_Load()
    Set oSkin.AppDriver = p_oAppDrivr
    Set oSkin.Form = Me
    oSkin.ApplySkin xeFormTransEqualRight
-   
+   txtField(1) = IFNull(p_oCPSales.Financer("sCompnyNm"), "")
+   txtField(3) = CDbl(p_oCPSales.Financer("nAmtPaidx"))
    txtField(3).Enabled = IIf(p_oCPSales.Financer("cInHousex") = xeYes, False, True)
 End Sub
 
 Private Sub p_oCPSales_MasterRetrieved(ByVal Index As Integer)
    If Index = 22 Then
       txtField(3) = Format(p_oCPSales.Financer("nAmtPaidx"), "#,##0.00")
-      txtField(4) = Format(p_oCPSales.Financer("nFinAmtxx"), "#,##0.00")
       lblTotalAmt = Format(p_oCPSales.Financer("nFinAmtxx"), "#,##0.00")
       txtField(5) = p_oCPSales.Master("sApplicNo")
    End If

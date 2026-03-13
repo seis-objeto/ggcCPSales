@@ -133,7 +133,7 @@ End Property
 
 Function InitTransaction() As Boolean
    Dim lsOldProc As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lnCtr As Integer
    Dim lsSQL As String
 
@@ -183,7 +183,7 @@ End Function
 
 Function SaveTransaction() As Boolean
    Dim lsOldProc As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsSQL As String
    Dim lnRow As Long
    Dim lnCtr As Integer
@@ -246,7 +246,7 @@ errProc:
 End Function
 
 Function OpenTransaction(sTransNo As String) As Boolean
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsOldProc As String
    Dim lsSQL As String
    Dim lnRow As Long
@@ -277,24 +277,24 @@ Function OpenTransaction(sTransNo As String) As Boolean
                   " AND a.sColorIDx = d.sColorIDx" & _
                   " AND a.sTransNox = " & strParm(sTransNo)
                
-      Set loRS = New Recordset
-      loRS.Open lsSQL, .Connection, , , adCmdText
+      Set lors = New Recordset
+      lors.Open lsSQL, .Connection, , , adCmdText
       InitDetail
       With p_oDetail
-         If loRS.EOF Then .AddNew
+         If lors.EOF Then .AddNew
          
-         Do Until loRS.EOF
+         Do Until lors.EOF
             .AddNew
-            .Fields("sSerialNo") = loRS("sSerialNo")
-            .Fields("sBrandNme") = loRS("sBrandNme")
-            .Fields("sModelNme") = loRS("sModelNme")
-            .Fields("sColorNme") = loRS("sColorNme")
-            .Fields("nUnitPrce") = loRS("nUnitPrce")
-            .Fields("sBrandIDx") = loRS("sBrandIDx")
-            .Fields("sModelIDx") = loRS("sModelIDx")
-            .Fields("sColorIDx") = loRS("sColorIDx")
+            .Fields("sSerialNo") = lors("sSerialNo")
+            .Fields("sBrandNme") = lors("sBrandNme")
+            .Fields("sModelNme") = lors("sModelNme")
+            .Fields("sColorNme") = lors("sColorNme")
+            .Fields("nUnitPrce") = lors("nUnitPrce")
+            .Fields("sBrandIDx") = lors("sBrandIDx")
+            .Fields("sModelIDx") = lors("sModelIDx")
+            .Fields("sColorIDx") = lors("sColorIDx")
             
-            loRS.MoveNext
+            lors.MoveNext
          Loop
       End With
    End With
@@ -304,7 +304,7 @@ Function OpenTransaction(sTransNo As String) As Boolean
    OpenTransaction = True
 
 endProc:
-   Set loRS = Nothing
+   Set lors = Nothing
    Exit Function
 errProc:
    ShowError lsOldProc & "( " & sTransNo & " )"
@@ -364,6 +364,7 @@ Sub InitDetail()
       .Fields.Append "sBrandIDx", adVarChar, 10
       .Fields.Append "sModelIDx", adVarChar, 10
       .Fields.Append "sColorIDx", adVarChar, 10
+      .Fields.Append "sModelCde", adVarChar, 10
       .Open
    End With
 End Sub
@@ -403,7 +404,7 @@ Private Function getBrand(ByVal lnRow As Integer, _
    Dim lasBrand() As String
    Dim lsProcName As String
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsBrowse As String
 
    lsProcName = "getBrand"
@@ -428,10 +429,10 @@ Private Function getBrand(ByVal lnRow As Integer, _
    End If
 
    If lsBrand <> "" Then lsSQL = AddCondition(lsSQL, lsBrand)
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
    
-   If loRS.EOF Then
+   If lors.EOF Then
       If lbSearch = False Then
          GoTo endWithClear
       Else
@@ -439,11 +440,11 @@ Private Function getBrand(ByVal lnRow As Integer, _
       End If
    End If
 
-   If loRS.RecordCount = 1 Then
-      p_oDetail("sBrandIDx") = loRS("sBrandIDx")
-      p_oDetail("sBrandNme") = loRS("sBrandNme")
+   If lors.RecordCount = 1 Then
+      p_oDetail("sBrandIDx") = lors("sBrandIDx")
+      p_oDetail("sBrandNme") = lors("sBrandNme")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors _
                               , "sBrandIDx»sBrandNme" _
                               , "Brand ID»Brand" _
                               , "@»@")
@@ -478,7 +479,7 @@ Private Function getModel(ByVal lnRow As Integer, _
    Dim lasModel() As String
    Dim lsProcName As String
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsBrowse As String
    Dim lnCtr As Integer
 
@@ -508,12 +509,12 @@ Private Function getModel(ByVal lnRow As Integer, _
    End If
 
    If lsModel <> "" Then lsSQL = AddCondition(lsSQL, lsModel)
-   Set loRS = New Recordset
+   Set lors = New Recordset
    Debug.Print (lsSQL)
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
    
 
-   If loRS.EOF Then
+   If lors.EOF Then
       If lbSearch = False Then
          GoTo endWithClear
       Else
@@ -521,12 +522,12 @@ Private Function getModel(ByVal lnRow As Integer, _
       End If
    End If
 
-   If loRS.RecordCount = 1 Then
-      p_oDetail("sModelIDx") = loRS("sModelIDx")
-      p_oDetail("sModelNme") = loRS("sModelNme")
-      p_oDetail("sModelCde") = loRS("sModelCde")
+   If lors.RecordCount = 1 Then
+      p_oDetail("sModelIDx") = lors("sModelIDx")
+      p_oDetail("sModelNme") = lors("sModelNme")
+      p_oDetail("sModelCde") = IFNull(lors("sModelCde"), "")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors _
                               , "sModelIDx»sModelNme»sModelCde»sBrandNme" _
                               , "Model ID»Model»Code»Brand" _
                               , "@»@»@»@" _
@@ -563,7 +564,7 @@ Private Function getColor(ByVal lnRow As Integer, _
    Dim lasColor() As String
    Dim lsProcName As String
    Dim lsSQL As String
-   Dim loRS As Recordset
+   Dim lors As Recordset
    Dim lsBrowse As String
 
    lsProcName = "getColor"
@@ -588,10 +589,10 @@ Private Function getColor(ByVal lnRow As Integer, _
    End If
 
    If lsColor <> "" Then lsSQL = AddCondition(lsSQL, lsColor)
-   Set loRS = New Recordset
-   loRS.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
+   Set lors = New Recordset
+   lors.Open lsSQL, p_oAppDrivr.Connection, adOpenStatic, adLockReadOnly, adCmdText
    
-   If loRS.EOF Then
+   If lors.EOF Then
       If lbSearch = False Then
          GoTo endWithClear
       Else
@@ -599,11 +600,11 @@ Private Function getColor(ByVal lnRow As Integer, _
       End If
    End If
 
-   If loRS.RecordCount = 1 Then
-      p_oDetail("sColorIDx") = loRS("sColorIDx")
-      p_oDetail("sColorNme") = loRS("sColorNme")
+   If lors.RecordCount = 1 Then
+      p_oDetail("sColorIDx") = lors("sColorIDx")
+      p_oDetail("sColorNme") = lors("sColorNme")
    Else
-      lsBrowse = KwikBrowse(p_oAppDrivr, loRS _
+      lsBrowse = KwikBrowse(p_oAppDrivr, lors _
                               , "sColorIDx»sColorNme" _
                               , "Color ID»Color" _
                               , "@»@")
