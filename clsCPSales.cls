@@ -1792,21 +1792,9 @@ Private Function getDetail(ByVal lnRow As Integer, _
       'kalyptus - 2022.10.10 02.50pm
       'Check if branch is Biyaheng Fiesta
       '#Tag:Biyaheng Fiesta
-      If p_sBranchCd = "C0M2" Or p_sBranchCd = "C134" Then
+      If p_sBranchCd = "C0M2" Then
          Set lors = getMFDiscountPrice(lnRow)
          If Not lors.EOF Then
-'            If p_sPaymForm = "1" Then
-'               .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
-'               .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
-'               .Detail(lnRow, "nDiscRate") = lors("nCardRate")
-'               .Detail(lnRow, "nDiscAmtx") = lors("nCardAmtx")
-'            Else
-'               .Detail(lnRow, "nSelPrice") = lors("nUnitprce")
-'               .Detail(lnRow, "nUnitPrce") = lors("nUnitprce")
-'               .Detail(lnRow, "nDiscRate") = lors("nDiscRate")
-'               .Detail(lnRow, "nDiscAmtx") = lors("nDiscAmtx")
-'            End If
-            
             If p_sTerm = "0" Then
                GoTo cashPayment
             ElseIf p_sTerm = "6" Or p_sTerm = "12" Then
@@ -3406,6 +3394,9 @@ Private Function checkSRP() As Boolean
    Dim lnDiscRate As Double
    Dim lnDiscAmtx As Double
    
+   Dim lbAllowChangePriceUp As Boolean
+   Dim lbAllowChangePriceDown As Boolean
+   Dim lbSeekApproval As Boolean
    
    lsProcName = "checkSRP"
    'On Error GoTo errProc
@@ -3512,86 +3503,81 @@ Private Function checkSRP() As Boolean
       Else
          'allowable discount rate
          lnPercent = CDbl(IFNull(IIf(p_oAppDrivr.getConfiguration("UnitDsc") = "", 0#, p_oAppDrivr.getConfiguration("UnitDsc")), 0#)) / 100
-      
+         
+         'mac 2026.03.13
+         '  added configuration for allowing change price
+         lbAllowChangePriceUp = IFNull(p_oAppDrivr.getConfiguration("ChngPrcUp"), "0") = "1"
+         lbAllowChangePriceDown = IFNull(p_oAppDrivr.getConfiguration("ChngPrcDwn"), "0") = "1"
+         lbSeekApproval = False
+               
          For lnCtr = 0 To ItemCount - 1
-           'If .Detail(lnCtr, "cHsSerial") = "1" Then
-           If p_sSQLSRPx = "" Then
-'               'kalyptus - 2022.10.10 02.50pm
-'               'Check if branch is Biyaheng Fiesta
-'               '#Tag:Mobile Fiesta
-'               If p_sBranchCd = "C0M2" Then
-'                  Set lors = getMFDiscountPrice(lnCtr)
-'
-'                  'kalyptus - 2022.10.25 09:55am
-'                  'Check if this is a credit card transaction
-'                  If p_oCredtCard.RecordCount = 0 Then
-'                     lnDiscRate = lors("nDiscRate")
-'                     lnDiscAmtx = lors("nDiscAmtx")
-'                  Else
-'                     p_oCredtCard.MoveFirst
-'                     If Trim(p_oCredtCard("sCrCardNo")) = "" Then
-'                        lnDiscRate = lors("nDiscRate")
-'                        lnDiscAmtx = lors("nDiscAmtx")
-'                     Else
-'                        lnDiscRate = lors("nCardRate")
-'                        lnDiscAmtx = lors("nCardAmtx")
-'                     End If
-'                  End If
-'
-'                  If Not lors.EOF Then
-'                     'Assumed that unit price is fixed
-'                     If .Detail(lnCtr, "nDiscRate") > lnDiscRate Or .Detail(lnCtr, "nDiscAmtx") > lnDiscAmtx Then
-'                          MsgBox "Unit price is below the allowable discounted price for this Model!" & vbCrLf & _
-'                                 "This requires an approval from an authorized personnel..." & vbCrLf & vbCrLf & _
-'                                 "For additional detail, you can contact Guanzon Group's MIS/SSG.", vbOKOnly, "Validation"
-'
-'                          If Not GetCodeApproval(p_oAppDrivr, lsApprovedCD, lsApproveID, lsApproveName) Then
-'                             MsgBox "User is not authorized to Approve such Discount!" & vbCrLf & _
-'                                      "Verify your entry then try again!", vbOKOnly + vbCritical, "Warning"
-'                             GoTo endProc
-'                          End If
-'
-'                          If isValidApproveCode( _
-'                             p_oSCA_Const.pxeMPDiscount, _
-'                             p_oAppDrivr.BranchCode, _
-'                             Mid(lsApprovedCD, 4, 1), _
-'                             Master("dTransact"), _
-'                             Master("sSalesInv"), _
-'                             lsApprovedCD) Then
-'
-'                             p_oBaseClas.Master("sApproved") = lsApproveID
-'
-'                             lsSQL = "xTransNox"
-'                             p_sSQLSRPx = "INSERT INTO xxxSCA_Usage" & _
-'                                            " SET sTransNox = " & strParm(lsSQL) & _
-'                                                  ", sApprCode = " & strParm(lsApprovedCD) & _
-'                                                  ", sApproved = " & strParm(lsApproveID) & _
-'                                                  ", sSystemCD = " & strParm(p_oSCA_Const.pxeMPDiscount) & _
-'                                                  ", sSourceNo = " & strParm(Master("sTransNox")) & _
-'                                                  ", sSourceCD = " & strParm(pxeCPSales) & _
-'                                                  ", sModified = " & strParm(p_oAppDrivr.UserID) & _
-'                                                  ", dModified = " & dateParm(p_oAppDrivr.ServerDate)
-'                             Exit For
-'                          Else
-'                             MsgBox "Invalid APPROVAL CODE detected." & vbCrLf & _
-'                                   "Verify entry then try again!", vbCritical, "Warning"
-'                             GoTo endProc
-'                          End If
-'                     End If
-''                     Loop
-'                  End If
-'               End If
-              
-              'check if discounted
-              If .Detail(lnCtr, "nDiscAmtx") > 0# And .Detail(lnCtr, "nSelPrice") > 0 Then
-                 lnDiff = .Detail(lnCtr, "nDiscAmtx") / .Detail(lnCtr, "nSelPrice")
-                 'she 2024-07-16 1:34 pm check only if discount rate is greater than zero
-                 If (.Detail(lnCtr, "nDiscRate") / 100) + lnDiff >= lnPercent Then
-'                  If (.Detail(lnCtr, "nDiscRate") / 100) + lnDiff <> 0# Then
+            'mac 2026.03.13 - validate change in price
+            'check if unit price was changed
+            If Not lbSeekApproval Then
+               If .Detail(lnCtr, "nUnitPrce") <> .Detail(lnCtr, "nSelPrice") Then
+                  'transferred this validation from UI to this procedure
+                  '  she 2025 to allow the srp if item is insurance as per instruction by sir rex
+                  If .Detail(lnCtr, "nUnitPrce") <> "C001052" And .Detail(lnCtr, "nUnitPrce") <> "C0W1026" Then
+                     If .Detail(lnCtr, "nUnitPrce") > .Detail(lnCtr, "nSelPrice") Then 'unit price is greater than SRP
+                        If Not lbAllowChangePriceUp Then
+                           MsgBox "Unit price is above the SRP for this Model!" & vbCrLf & _
+                                    "System does not allow this feature..." & vbCrLf & vbCrLf & _
+                                    "For additional detail, you can contact Guanzon Group's MIS/SSG.", vbOKOnly, "Validation"
+                           GoTo endProc
+                        Else
+                           lbSeekApproval = True
+                        End If
+                     End If
+                     
+                     If .Detail(lnCtr, "nUnitPrce") < .Detail(lnCtr, "nSelPrice") Then 'unit price is less than SRP
+                        If Not lbAllowChangePriceDown Then
+                           MsgBox "Unit price is below the SRP for this Model!" & vbCrLf & _
+                                    "System does not allow this feature..." & vbCrLf & vbCrLf & _
+                                    "For additional detail, you can contact Guanzon Group's MIS/SSG.", vbOKOnly, "Validation"
+                           GoTo endProc
+                        Else
+                           lbSeekApproval = True
+                        End If
+                     End If
+                  End If
+               End If
+               
+               If lbSeekApproval Then
+                  lnRights = p_oAppDrivr.UserLevel
+                  lsApproveID = p_oAppDrivr.UserID
+                  
+                  If lnRights < xeManager Then
+                     If GetApproval(p_oAppDrivr, lnRights, lsApproveID, lsApproveName, p_oAppDrivr.MenuName) = False Then
+                        MsgBox "User approval cancelled!!!", vbOKOnly, "Validation"
+                        GoTo endProc
+                     End If
+                     
+                     If lnRights < xeManager Then
+                        MsgBox "User is not allowed to approve this transaction!!!", vbOKOnly, "Validation"
+                        GoTo endProc
+                     End If
+                  End If
+                  
+                  p_oBaseClas.Master("sApproved") = lsApproveID
+               End If
+            End If
+            'end - mac 2026.03.13 - validate change in price
+         
+            If p_sSQLSRPx = "" Then
+               'mac 2026.03.13
+               '  object cleanup, removed this block of commented out code, see github history
+               '     kalyptus - 2022.10.10 02.50pm
+               '     Check if branch is Biyaheng Fiesta
+               
+               'check if discounted
+               If .Detail(lnCtr, "nDiscAmtx") > 0# And .Detail(lnCtr, "nSelPrice") > 0 Then
+                  lnDiff = .Detail(lnCtr, "nDiscAmtx") / .Detail(lnCtr, "nSelPrice")
+                  'she 2024-07-16 1:34 pm check only if discount rate is greater than zero
+                  If (.Detail(lnCtr, "nDiscRate") / 100) + lnDiff >= lnPercent Then
                      If (.Detail(lnCtr, "nDiscRate") / 100) + lnDiff >= lnPercent Then
                         MsgBox "Unit price is below the allowable discounted price for this Model!" & vbCrLf & _
-                              "This requires an approval from an authorized personnel..." & vbCrLf & vbCrLf & _
-                              "For additional detail, you can contact Guanzon Group's MIS/SSG.", vbOKOnly, "Validation"
+                                 "This requires an approval from an authorized personnel..." & vbCrLf & vbCrLf & _
+                                 "For additional detail, you can contact Guanzon Group's MIS/SSG.", vbOKOnly, "Validation"
                               
                         If Not GetCodeApproval(p_oAppDrivr, lsApprovedCD, lsApproveID, lsApproveName) Then
                            MsgBox "User is not authorized to Approve such Discount!" & vbCrLf & _
